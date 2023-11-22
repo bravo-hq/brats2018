@@ -5,15 +5,6 @@ import platform
 from monai.networks.nets import SwinUNETR, UNETR, SegResNetVAE
 import torch
 
-if platform.system() == "Linux":
-    from models.dim3.main_model.models.dLKA import Model as MainModel_per
-    from models.dim3.main_model.models.main import Model as MainModel
-    from models.dim3.d_lka_former.d_lka_net_synapse import D_LKA_Net
-    from models.dim3.d_lka_former.transformerblock import (
-        TransformerBlock_3D_single_deform_LKA,
-        TransformerBlock,
-    )
-
 
 class SegResNetVAEModified(SegResNetVAE):
     def __init__(self, *args, **kwargs):
@@ -94,6 +85,9 @@ def get_transunet3d(config):
 
 
 def get_main_model(config):
+    from models.dim3.main_model.models.dLKA import Model as MainModel_per
+    from models.dim3.main_model.models.main import Model as MainModel
+
     return MainModel(**config["model"]["params"])
 
 
@@ -122,6 +116,12 @@ def get_unetrpp(config):
 
 
 def d_lka_net_synapse(config):
+    from models.dim3.d_lka_former.d_lka_net_synapse import D_LKA_Net
+    from models.dim3.d_lka_former.transformerblock import (
+        TransformerBlock_3D_single_deform_LKA,
+        TransformerBlock,
+    )
+
     return D_LKA_Net(
         trans_block=TransformerBlock_3D_single_deform_LKA, **config["model"]["params"]
     )
