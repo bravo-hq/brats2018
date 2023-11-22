@@ -7,7 +7,7 @@ checkpoints:
 
 dataset:
   name: "brats_2018_loader"
-  input_size: [128,128,128]
+  input_size: [96,96,96]
   train:
     params:
       # data_root: "E:/Brats 2018 data"
