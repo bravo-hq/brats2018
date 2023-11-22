@@ -9,7 +9,7 @@ checkpoints:
   log_pictures: false
   
 dataset:
-  name: "brats_metastasis_loader"
+  name: "brats_2018_loader"
   input_size: [224,224]
   train:
     params:

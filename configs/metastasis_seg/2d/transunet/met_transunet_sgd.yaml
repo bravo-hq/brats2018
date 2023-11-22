@@ -8,7 +8,7 @@ checkpoints:
   ckpt_path: "/cabinet/yousef/metastasis/dim2/tb_logs/TransUnet_SGD/version_0/TransUnet_SGD-epoch=84-val_loss=0.1623.ckpt"
   log_pictures: false
 dataset:
-  name: "brats_metastasis_loader"
+  name: "brats_2018_loader"
   input_size: [224,224]
   train:
     params:

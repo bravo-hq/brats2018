@@ -8,7 +8,7 @@ checkpoints:
   ckpt_path: '/cabinet/yousef/metastasis/dim2/tb_logs/UNet_AdamW/version_0/UNet_AdamW-epoch=57-val_loss=0.2123.ckpt'
   log_pictures: false
 dataset:
-  name: "brats_metastasis_loader"
+  name: "brats_2018_loader"
   input_size: [256,256]
   train:
     params:
