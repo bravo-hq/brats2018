@@ -61,7 +61,7 @@ class SemanticSegmentation3D(pl.LightningModule):
             roi_size = [roi_size[2], roi_size[0], roi_size[1]]
             self.slider = SlidingWindowInferer(
                 roi_size=roi_size,
-                sw_batch_size=self.test_batch_size,
+                sw_batch_size=config["data_loader"]["train"]["batch_size"],
                 **config["sliding_window_params"],
             )
         else:
