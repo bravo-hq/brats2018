@@ -1,0 +1,86 @@
+is3d: true
+checkpoints:
+  continue_training: false
+  test_mode: false
+  ckpt_path: 'saved_models/met_unet/TranscUnet_Adam_2021-10-20_16-00-00/checkpoints/epoch=299.ckpt'
+  log_pictures: false
+dataset:
+  name: "brats_metastasis_loader"
+  input_size: [128,128,128]
+  train:
+    params:
+      # data_root: "E:/Brats 2018 data"
+      data_root: "/cabinet/dataset/brats/Brats 2018"
+      normalization: true
+      augmentation: true  
+      p: 0.5
+      
+  validation:
+    params:
+      # data_root: "E:/Brats 2018 data"
+      data_root: "/cabinet/dataset/brats/Brats 2018"
+      normalization: true
+      augmentation: false
+        
+  test:
+    params:
+      # data_root: "E:/Brats 2018 data"
+      data_root: "/cabinet/dataset/brats/Brats 2018"
+      normalization: true
+      augmentation: false
+        
+  test_split: 0.2
+  validation_split: 0.1
+data_loader:
+  train: 
+    batch_size: 2
+    shuffle: true
+    num_workers: 14
+    pin_memory: true
+    persistent_workers: true
+  validation: 
+    batch_size: 1
+    shuffle: false
+    num_workers: 14
+    pin_memory: true
+    persistent_workers: true
+  test:
+    batch_size: 1
+    shuffle: false
+    num_workers: 14
+    pin_memory: false
+    persistent_workers: true
+training:
+  optimizer:
+    name: 'AdamW'
+    params:
+      lr: 0.0004
+  criterion:    
+    params: 
+      dice_weight: 0.5
+      bce_weight: 0.5
+      global_weight: 1
+      blob_weight: 0.0
+      blob_params:
+        hd_loss: false
+        dice_loss: true
+  scheduler:
+    name: 'LinearWarmupCosineAnnealingLR'
+    params:
+        warmup_epochs: 10
+        max_epochs: 300
+        warmup_start_lr: 0.000001
+  epochs: 300
+model: 
+  name: 'SwinUNETR3D-v2_AdamW'
+  params:
+    img_size: [128,128,128]
+    spatial_dims: 3
+    in_channels: 4
+    out_channels: 3
+    use_v2: true
+use_sliding_window: true
+sliding_window_params:
+  overlap: 0.7
+  mode: 'gaussian'
+

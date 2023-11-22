@@ -1,0 +1,88 @@
+run:
+  mode: 'train'
+  device: 'gpu'
+transforms: none
+checkpoints:
+  continue_training: false
+  test_mode: false
+  ckpt_path: 'saved_models/met_unet/TranscUnet_Adam_2021-10-20_16-00-00/checkpoints/epoch=299.ckpt'
+  log_pictures: false
+dataset:
+  name: "brats_metastasis_loader"
+  input_size: [256,256]
+  train:
+    params:
+      # data_root: "D:/DATASETS/Brats 2023/Segmentation - Brain Metastases/preprocessed_2d"
+      data_root: "/cabinet/dataset/brats/Brats 2023/Segmentation - Brain Metastases/preprocessed_2d/"
+      normalization: true
+      augmentation: true
+      # root_3D: "D:/DATASETS/Brats 2023/Segmentation - Brain Metastases/ASNR-MICCAI-BraTS2023-MET-Challenge-TrainingData"
+      root_3D: "/cabinet/dataset/brats/Brats 2023/Segmentation - Brain Metastases/ASNR-MICCAI-BraTS2023-MET-Challenge-TrainingData/"
+      p: 0.5
+  validation:
+    params:
+      # data_root: "D:/DATASETS/Brats 2023/Segmentation - Brain Metastases/preprocessed_2d"
+      data_root: "/cabinet/dataset/brats/Brats 2023/Segmentation - Brain Metastases/preprocessed_2d/"
+      normalization: true
+      augmentation: false
+      # root_3D: "D:/DATASETS/Brats 2023/Segmentation - Brain Metastases/ASNR-MICCAI-BraTS2023-MET-Challenge-TrainingData"
+      root_3D: "/cabinet/dataset/brats/Brats 2023/Segmentation - Brain Metastases/ASNR-MICCAI-BraTS2023-MET-Challenge-TrainingData/"
+  test:
+    params:
+      # data_root: "D:/DATASETS/Brats 2023/Segmentation - Brain Metastases/preprocessed_2d"
+      data_root: "/cabinet/dataset/brats/Brats 2023/Segmentation - Brain Metastases/preprocessed_2d/"
+      normalization: true
+      augmentation: false
+      # root_3D: "D:/DATASETS/Brats 2023/Segmentation - Brain Metastases/ASNR-MICCAI-BraTS2023-MET-Challenge-TrainingData"
+      root_3D: "/cabinet/dataset/brats/Brats 2023/Segmentation - Brain Metastases/ASNR-MICCAI-BraTS2023-MET-Challenge-TrainingData/"
+  test_split: 0.2
+  validation_split: 0.1
+data_loader:
+  train: 
+    batch_size: 32
+    shuffle: true
+    num_workers: 14
+    pin_memory: true
+    persistent_workers: true
+  validation: 
+    batch_size: 32
+    shuffle: false
+    num_workers: 14
+    pin_memory: true
+    persistent_workers: true
+  test:
+    batch_size: 2
+    shuffle: false
+    num_workers: 14
+    pin_memory: false
+    persistent_workers: true
+training:
+  optimizer:
+    name: 'SGD'
+    params:
+      lr: 0.0001
+  criterion:
+    name: "DiceLoss"
+    params: 
+      dice_weight: 0.5
+      bce_weight: 0.5
+      global_weight: 1
+      blob_weight: 0.0
+      blob_params:
+        hd_loss: false
+        dice_loss: true
+  scheduler:
+    name: 'ReduceLROnPlateau'
+    params:
+        factor: 0.5
+        patience: 5
+        mode: 'min'
+  epochs: 300
+model: 
+  name: 'SwinUNETR_SGD'
+  params:
+    img_size: [256,256]
+    spatial_dims: 2
+    in_channels: 4
+    out_channels: 3
+    use_v2: false
