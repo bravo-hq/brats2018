@@ -20,7 +20,7 @@ class UnetrPPEncoder(nn.Module):
         depths=[3, 3, 3, 3],
         num_heads=4,
         spatial_dims=3,
-        in_channels=1,
+        in_channels=4,
         dropout=0.0,
         transformer_dropout_rate=0.1,
         **kwargs
