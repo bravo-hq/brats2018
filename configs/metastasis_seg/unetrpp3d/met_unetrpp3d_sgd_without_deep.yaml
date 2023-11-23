@@ -33,7 +33,7 @@ dataset:
   validation_split: 0.1
 data_loader:
   train: 
-    batch_size: 4
+    batch_size: 2
     shuffle: true
     num_workers: 14
     pin_memory: true
@@ -62,13 +62,8 @@ training:
     params: 
       dice_weight: 0.5
       bce_weight: 0.5
-      global_weight: 1
-      blob_weight: 0.0
-      blob_params:
-        hd_loss: false
-        dice_loss: true
   scheduler:
-    name: 'NONE'
+    name: 'ReduceLROnPlateau'
     params:
         factor: 0.5
         patience: 7
@@ -78,7 +73,7 @@ model:
   name: 'UNETRPP3D_AdamW_without_deep'
   params:
     in_channels: 4
-    out_channels: 3
+    out_channels: 4
     do_ds: false
     num_heads: 4
     dims: [32, 64, 128, 256]
