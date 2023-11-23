@@ -58,9 +58,9 @@ class UNETR_PP(SegmentationNetwork):
             )
 
         self.feat_size = (
-            4,
-            4,
-            4,
+            3,
+            3,
+            3,
         )
         self.hidden_size = hidden_size
 
@@ -83,7 +83,7 @@ class UNETR_PP(SegmentationNetwork):
             kernel_size=3,
             upsample_kernel_size=2,
             norm_name=norm_name,
-            out_size=8 * 8 * 8,
+            out_size=6 * 6 * 6,
         )
         self.decoder4 = UnetrUpBlock(
             spatial_dims=3,
@@ -92,7 +92,7 @@ class UNETR_PP(SegmentationNetwork):
             kernel_size=3,
             upsample_kernel_size=2,
             norm_name=norm_name,
-            out_size=16 * 16 * 16,
+            out_size=12 * 12 * 12,
         )
         self.decoder3 = UnetrUpBlock(
             spatial_dims=3,
@@ -101,7 +101,7 @@ class UNETR_PP(SegmentationNetwork):
             kernel_size=3,
             upsample_kernel_size=2,
             norm_name=norm_name,
-            out_size=32 * 32 * 32,
+            out_size=24 * 24 * 24,
         )
         self.decoder2 = UnetrUpBlock(
             spatial_dims=3,
@@ -110,7 +110,7 @@ class UNETR_PP(SegmentationNetwork):
             kernel_size=3,
             upsample_kernel_size=(4, 4, 4),
             norm_name=norm_name,
-            out_size=128 * 128 * 128,
+            out_size=96 * 96 * 96,
             conv_decoder=True,
         )
         self.out1 = UnetOutBlock(

@@ -62,11 +62,6 @@ training:
     params: 
       dice_weight: 0.5
       bce_weight: 0.5
-      global_weight: 1
-      blob_weight: 0.0
-      blob_params:
-        hd_loss: false
-        dice_loss: true
   scheduler:
     name: 'CustomDecayLR'
     params:
@@ -77,7 +72,7 @@ model:
   params:
     crop_size: [128,128,128]
     input_channels: 4
-    num_classes: 3
+    num_classes: 4
     deep_supervision: false
     patch_size: [4,4,4]
     window_size: [4,4,8,4]
