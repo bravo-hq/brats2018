@@ -63,12 +63,12 @@ training:
     params: 
       dice_weight: 0.5
       bce_weight: 0.5
-
   scheduler:
     name: 'CustomDecayLR'
     params:
       max_epochs: 1000
   epochs: 1000
+  
 model: 
   name: 'MainModel_SGD_afshin_dnnn'
   params:
