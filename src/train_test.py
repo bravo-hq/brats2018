@@ -147,7 +147,6 @@ def main():
     ckpt_path = None
     if config["checkpoints"]["continue_training"]:
         ckpt_path = config["checkpoints"]["ckpt_path"]
-        continue_training = config["checkpoints"]["continue_training"]
     
 
     if not just_test:
@@ -179,10 +178,8 @@ def main():
             os.makedirs(logger.log_dir, exist_ok=True)
             with open(os.path.join(logger.log_dir, "hpram.yaml"), "w") as yaml_file:
                 yaml.dump(config, yaml_file)
-            if continue_training:
-                trainer.fit(model, train_dataloaders=tr_loader, val_dataloaders=vl_loader, ckpt_path=ckpt_path)
-            else:        
-                trainer.fit(model, train_dataloaders=tr_loader, val_dataloaders=vl_loader)
+            trainer.fit(model, train_dataloaders=tr_loader, val_dataloaders=vl_loader, ckpt_path=ckpt_path)
+
 
         print(f"testing {CONFIG_NAME}")
         trainer.test(
