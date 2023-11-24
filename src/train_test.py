@@ -180,9 +180,9 @@ def main():
             with open(os.path.join(logger.log_dir, "hpram.yaml"), "w") as yaml_file:
                 yaml.dump(config, yaml_file)
             if continue_training:
-                trainer(resume_from_checkpoint=ckpt_path)
-                
-            trainer.fit(model, train_dataloaders=tr_loader, val_dataloaders=vl_loader)
+                trainer.fit(model, train_dataloaders=tr_loader, val_dataloaders=vl_loader, ckpt_path=ckpt_path)
+            else:        
+                trainer.fit(model, train_dataloaders=tr_loader, val_dataloaders=vl_loader)
 
         print(f"testing {CONFIG_NAME}")
         trainer.test(
