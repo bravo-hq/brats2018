@@ -154,7 +154,7 @@ MODEL_FACTORY = {
     "segresnetvae3d": get_segresnetvae,
     "nnformer3d": get_nnformer,
     "unetrpp3d": get_unetrpp,
-    "dlka-former": d_lka_net_synapse,
+    "dlk-former": d_lka_net_synapse,
     "vnet": get_vnet,
 }
 
