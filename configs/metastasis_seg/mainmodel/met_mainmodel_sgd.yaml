@@ -112,3 +112,8 @@ model:
 
     dec_cnn_deforms: [false, false]
     dec_hyb_deforms: null
+
+use_sliding_window: true
+sliding_window_params:
+  overlap: 0.75
+  mode: 'gaussian'
