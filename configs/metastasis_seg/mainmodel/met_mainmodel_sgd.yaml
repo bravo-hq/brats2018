@@ -1,7 +1,7 @@
 is3d: true
 checkpoints:
   continue_training: false
-  test_mode: true
+  test_mode: false
   ckpt_path: '/cabinet/yousef/best.pt'
   log_pictures: false
   save_nifty: true
