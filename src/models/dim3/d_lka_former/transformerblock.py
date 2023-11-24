@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch
-from networks.dynunet_block import UnetResBlock
+from .dynunet_block import UnetResBlock
 
 
 class TransformerBlock(nn.Module):  # Rename
@@ -642,7 +642,7 @@ class TransformerBlock_2Dsingle(nn.Module):
 # 3D LKA with one deform conv
 #
 #########################
-from networks.d_lka_former.deform_conv import DeformConvPack, DeformConvPack_Depth
+from .deform_conv import DeformConvPack, DeformConvPack_Depth
 
 
 class TransformerBlock_3D_single_deform_LKA(nn.Module):

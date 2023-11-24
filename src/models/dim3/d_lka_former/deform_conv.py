@@ -10,7 +10,7 @@ from torch.nn import init
 from torch.nn.modules.utils import _triple
 
 # from deform_conv_func import DeformConvFunction
-from networks.d_lka_former.deform_conv_func import DeformConvFunction
+from .deform_conv_func import DeformConvFunction
 
 
 class DeformConv(nn.Module):

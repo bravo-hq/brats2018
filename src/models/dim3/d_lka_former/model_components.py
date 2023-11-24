@@ -3,8 +3,8 @@ from timm.models.layers import trunc_normal_
 from typing import Sequence, Tuple, Union
 from monai.networks.layers.utils import get_norm_layer
 from monai.utils import optional_import
-from networks.layers import LayerNorm
-from networks.d_lka_former.transformerblock import (
+from .layers import LayerNorm
+from .transformerblock import (
     TransformerBlock,
     TransformerBlock_3D_LKA,
     TransformerBlock_LKA_Channel,
@@ -17,7 +17,7 @@ from networks.d_lka_former.transformerblock import (
     TransformerBlock_Deform_LKA_Spatial,
     TransformerBlock_3D_single_deform_LKA,
 )
-from networks.dynunet_block import get_conv_layer, UnetResBlock
+from .dynunet_block import get_conv_layer, UnetResBlock
 
 
 einops, _ = optional_import("einops")

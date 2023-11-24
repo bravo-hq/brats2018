@@ -24,7 +24,6 @@ from matplotlib import pyplot as plt
 import glob
 from concurrent.futures import ProcessPoolExecutor
 import platform
-from brats_metrics.metrics import get_LesionWiseResults
 from tqdm import tqdm
 import h5py
 import pandas as pd
@@ -234,83 +233,6 @@ def save_with_different_thresholds(preds, name, name_dir, threshold=0.4, device=
         )
 
 
-def cal_lesion_based_metric(nifty_dir=None):
-    if nifty_dir is None:
-        raise ValueError("nifty_dir is None")
-    preds_list = sorted(
-        glob.glob(os.path.join(nifty_dir, "BraTS-MET*", "*-pred.nii.gz"))
-    )
-    seg_list = sorted(glob.glob(os.path.join(nifty_dir, "BraTS-MET*", "*-seg.nii.gz")))
-    if not preds_list or not seg_list:
-        raise ValueError("preds_list or seg_list is empty")
-    if len(preds_list) != len(seg_list):
-        raise ValueError("preds_list and seg_list have different length")
-    results = process_in_parallel(preds_list, seg_list)
-    print("Saving the results!!!!!!")
-    save_lesion_based_results(results, nifty_dir)
-    mean_metrics = calculate_metrics_mean(results)
-    # for key in mean_metrics["dice"].keys():
-    #     print(f"Lesion wise dice score for <{key}> is {mean_metrics['dice'][key]:.3f}")
-    #     print(f"Lesion wise hd95 score for <{key}> is {mean_metrics['hd'][key]:.3f}")
-    #     print(
-    #         f"Legacy dice score for <{key}> is {mean_metrics['legacy_dice'][key]:.3f}"
-    #     )
-    #     print(f"Legacy hd95 score for <{key}> is {mean_metrics['legacy_hd'][key]:.3f}")
-    return mean_metrics
 
 
-def save_lesion_based_results(results: list, nifty_dir: str):
-    patient_list = sorted(glob.glob(os.path.join(nifty_dir, "BraTS-MET*")))
-    patient_names = [os.path.basename(patient) for patient in patient_list]
-    with pd.ExcelWriter(os.path.join(nifty_dir, "results_per_patient.xlsx")) as writer:
-        for i, df in enumerate(results):
-            df.to_excel(writer, sheet_name=f"{patient_names[i]}")
 
-
-def calculate_metrics_mean(results):
-    metrics = {
-        "dice": {"wt": [], "tc": [], "et": []},
-        "hd": {"wt": [], "tc": [], "et": []},
-        "legacy_dice": {"wt": [], "tc": [], "et": []},
-        "legacy_hd": {"wt": [], "tc": [], "et": []},
-    }
-
-    for df in results:
-        for key in metrics["dice"].keys():
-            for metric_type, metric_name in zip(
-                ["dice", "hd", "legacy_dice", "legacy_hd"],
-                [
-                    "LesionWise_Score_Dice",
-                    "LesionWise_Score_HD95",
-                    "Legacy_Dice",
-                    "Legacy_HD95",
-                ],
-            ):
-                metrics[metric_type][key].append(
-                    df[df["Labels"] == key.upper()][metric_name].values[0]
-                )
-
-    mean_metrics = {
-        metric_type: {key: np.mean(values) for key, values in metric_dict.items()}
-        for metric_type, metric_dict in metrics.items()
-    }
-
-    return mean_metrics
-
-
-def process_in_parallel(preds_list, seg_list):
-    # with ProcessPoolExecutor(max_workers=max_workers) as executor:
-    #     results = list(
-    #         tqdm(
-    #             executor.map(get_LesionWiseResults, preds_list, seg_list),
-    #             total=len(preds_list),
-    #             desc="calculating lesion wise results",
-    #         )
-    #     )
-    results = Parallel(n_jobs=-1)(
-        delayed(get_LesionWiseResults)(pred, seg)
-        for pred, seg in tqdm(
-            zip(preds_list, seg_list), desc="calculating lesion wise results"
-        )
-    )
-    return results

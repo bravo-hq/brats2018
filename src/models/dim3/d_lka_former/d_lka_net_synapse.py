@@ -1,10 +1,10 @@
 from torch import nn
 from typing import Tuple, Union
 
-from networks.neural_network import SegmentationNetwork
-from networks.dynunet_block import UnetOutBlock, UnetResBlock
-from networks.d_lka_former.model_components import D_LKA_NetEncoder, D_LKA_NetUpBlock
-from networks.d_lka_former.transformerblock import (
+from .neural_network import SegmentationNetwork
+from .dynunet_block import UnetOutBlock, UnetResBlock
+from .model_components import D_LKA_NetEncoder, D_LKA_NetUpBlock
+from .transformerblock import (
     TransformerBlock,
     TransformerBlock_LKA_Channel,
     TransformerBlock_SE,
