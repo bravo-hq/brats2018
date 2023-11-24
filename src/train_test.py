@@ -147,6 +147,8 @@ def main():
     ckpt_path = None
     if config["checkpoints"]["continue_training"]:
         ckpt_path = config["checkpoints"]["ckpt_path"]
+        continue_training = config["checkpoints"]["continue_training"]
+    
 
     if not just_test:
         model = lightning_module(config, model=network)
@@ -177,6 +179,9 @@ def main():
             os.makedirs(logger.log_dir, exist_ok=True)
             with open(os.path.join(logger.log_dir, "hpram.yaml"), "w") as yaml_file:
                 yaml.dump(config, yaml_file)
+            if continue_training:
+                trainer(resume_from_checkpoint=ckpt_path)
+                
             trainer.fit(model, train_dataloaders=tr_loader, val_dataloaders=vl_loader)
 
         print(f"testing {CONFIG_NAME}")
