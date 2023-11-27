@@ -1,0 +1,104 @@
+is3d: true
+checkpoints:
+  continue_training: false
+  test_mode: false
+  ckpt_path: 'saved_models/met_unet/TranscUnet_Adam_2021-10-20_16-00-00/checkpoints/epoch=299.ckpt'
+  log_pictures: false
+dataset:
+  name: "brats_2018_loader"
+  input_size: [128,128,160]
+  train:
+    params:
+      # data_root: "E:/Brats 2018 data"
+      data_root: "/cabinet/dataset/brats/Brats 2018"
+      normalization: true
+      augmentation: true  
+      p: 0.5
+  validation:
+    params:
+      # data_root: "E:/Brats 2018 data"
+      data_root: "/cabinet/dataset/brats/Brats 2018"
+      normalization: true
+      augmentation: false  
+  test:
+    params:
+      # data_root: "E:/Brats 2018 data"
+      data_root: "/cabinet/dataset/brats/Brats 2018"
+      normalization: true
+      augmentation: false  
+  test_split: 0.2
+  validation_split: 0.1
+data_loader:
+  train: 
+    batch_size: 2
+    shuffle: true
+    num_workers: 14
+    pin_memory: true
+    persistent_workers: true
+  validation: 
+    batch_size: 1
+    shuffle: false
+    num_workers: 14
+    pin_memory: true
+    persistent_workers: true
+  test:
+    batch_size: 1
+    shuffle: false
+    num_workers: 14
+    pin_memory: false
+    persistent_workers: true
+training:
+  optimizer:
+    name: 'Adam'
+    params:
+      lr: 0.05
+  criterion:
+    params: 
+      dice_weight: 0.5
+      bce_weight: 0.5
+      global_weight: 1.0
+      blob_weight: 0.5
+      blob_params:
+        hd_loss: false
+        dice_loss: true
+  scheduler:
+    name: 'ReduceLROnPlateau'
+    params:
+        factor: 0.5
+        patience: 5
+        mode: 'min'
+  epochs: 300
+model: 
+  name: 'MainModel_Adam_128'
+  params:
+    spatial_shapes: [160, 128, 128]
+    in_channels: 4
+    out_channels: 3
+                 
+    # encoder params
+    cnn_kernel_sizes: [9,5]
+    cnn_features: [32, 64]
+    cnn_strides: [4,1]
+    cnn_dropouts: 0.0
+    hyb_kernel_sizes: [3,3,3]
+    hyb_features: [128,256,512]
+    hyb_strides: [2,2,2]
+    hyb_cnn_dropouts: 0.0
+    hyb_tf_proj_sizes: [32,32,32]
+    hyb_tf_repeats: [2,2,2]
+    hyb_tf_num_heads: [4,4,4]
+    hyb_tf_dropouts: 0.1
+
+    # decoder params
+    dec_hyb_tcv_kernel_sizes: [5,5,5]
+    dec_cnn_tcv_kernel_sizes: [5,9]
+    dec_hyb_kernel_sizes: null
+    dec_hyb_features: null
+    dec_hyb_cnn_dropouts: null
+    dec_hyb_tf_proj_sizes: null
+    dec_hyb_tf_repeats: null
+    dec_hyb_tf_num_heads: null
+    dec_hyb_tf_dropouts: null
+    dec_cnn_kernel_sizes: null
+    dec_cnn_features: null
+    dec_cnn_dropouts: null

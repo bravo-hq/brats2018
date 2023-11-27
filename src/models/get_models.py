@@ -86,9 +86,15 @@ def get_transunet3d(config):
 
 def get_main_model(config):
     from models.dim3.main_model.models.dLKA import Model as MainModel_per
-    from models.dim3.main_model.models.main import Model as MainModel
+    from models.dim3.main_model.models.main import Model_Base as MainModel
 
     return MainModel(**config["model"]["params"])
+
+
+def get_main_bridge_model(config):
+    from models.dim3.main_model.models.main import Model_Bridge
+
+    return Model_Bridge(**config["model"]["params"])
 
 
 def get_swinunetr(config):
@@ -122,9 +128,7 @@ def d_lka_net_synapse(config):
         TransformerBlock,
     )
 
-    return D_LKA_Net(
-        trans_block=TransformerBlock, **config["model"]["params"]
-    )
+    return D_LKA_Net(trans_block=TransformerBlock, **config["model"]["params"])
 
 
 def get_vnet(config):
@@ -145,6 +149,7 @@ MODEL_FACTORY = {
     "resunet3d": get_resunet3d,
     "resunetse3d": get_resunetse3d,
     "mainmodel": get_main_model,
+    "mainmodel-bridge": get_main_bridge_model,
     "transunet3d": get_transunet3d,
     "swinunetr": get_swinunetr,
     "swinunetr3d": get_swinunetr,
