@@ -68,6 +68,7 @@ def configure_trainer(config, logger):
         filename=f"{config['model']['name']}-{{epoch:02d}}-{{val_loss:.4f}}",
         save_top_k=1,
         mode="min",
+        save_last=True,
     )
     early_stop_callback = EarlyStopping(
         monitor="val_loss", min_delta=0.0001, patience=25, verbose=True, mode="min"
