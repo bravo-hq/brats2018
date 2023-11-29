@@ -1,6 +1,6 @@
 is3d: true
 checkpoints:
-  continue_training: true
+  continue_training: false
   test_mode: false
   ckpt_path: '/cabinet/yousef/brats2018/tb_logs/UNETR3D_AdamW/version_0/UNETR3D_AdamW-epoch=983-val_loss=0.1389.ckpt'
   log_pictures: false
@@ -68,7 +68,7 @@ training:
     name: 'ReduceLROnPlateau'
     params:
         factor: 0.5
-        patience: 7
+        patience: 9
         mode: 'min'
   epochs: 1000
 model: 
