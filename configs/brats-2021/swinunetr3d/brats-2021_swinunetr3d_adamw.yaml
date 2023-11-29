@@ -30,7 +30,7 @@ dataset:
       augmentation: false 
        
   test_split: 0.15
-  validation_split: 0.5
+  validation_split: 0.05
 data_loader:
   train: 
     batch_size: 2

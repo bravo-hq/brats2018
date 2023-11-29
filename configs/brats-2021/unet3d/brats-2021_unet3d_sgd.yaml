@@ -25,7 +25,7 @@ dataset:
       data_root: "/cabinet/dataset/brats/Brats 2021/data"
       normalization: true
   test_split: 0.15
-  validation_split: 0.5
+  validation_split: 0.05
 
 data_loader:
   train: 
