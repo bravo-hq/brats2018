@@ -60,7 +60,7 @@ training:
     name: 'ReduceLROnPlateau'
     params:
         factor: 0.5
-        patience: 7
+        patience: 9
         mode: 'min'
   epochs: 300
 

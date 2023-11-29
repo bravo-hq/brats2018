@@ -66,7 +66,7 @@ training:
     name: 'ReduceLROnPlateau'
     params:
         factor: 0.5
-        patience: 7
+        patience: 9
         mode: 'min'
   epochs: 500
 model: 
@@ -76,7 +76,7 @@ model:
     out_channels: 4
     img_size: [128,128,128]
     patch_size: [2,2,2]
-    input_size: [110592, 13824,1728,216]
+    input_size: [262144, 32768,4096,512]
     do_ds: False
 
 use_sliding_window: true
