@@ -29,8 +29,8 @@ dataset:
       normalization: true
       augmentation: false  
 
-  test_split: 0.15
-  validation_split: 0.05
+  test_split: 0.1
+  validation_split: 0.1
 
 data_loader:
   train: 
