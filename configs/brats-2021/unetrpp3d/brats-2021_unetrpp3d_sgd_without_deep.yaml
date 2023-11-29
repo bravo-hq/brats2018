@@ -1,0 +1,84 @@
+is3d: true
+checkpoints:
+  continue_training: false
+  test_mode: false
+  ckpt_path: 'saved_models/met_unet/TranscUnet_Adam_2021-10-20_16-00-00/checkpoints/epoch=299.ckpt'
+  log_pictures: false
+dataset:
+  name: "brats_2021_loader"
+  input_size: [128,128,128]
+  train:
+    params:
+      # data_root: "E:/Brats 2018 data"
+      data_root: "/cabinet/dataset/brats/Brats 2021/data"
+      normalization: true
+      augmentation: true  
+      p: 0.5
+      
+  validation:
+    params:
+      # data_root: "E:/Brats 2018 data"
+      data_root: "/cabinet/dataset/brats/Brats 2021/data"
+      normalization: true
+      augmentation: false
+        
+  test:
+    params:
+      # data_root: "E:/Brats 2018 data"
+      data_root: "/cabinet/dataset/brats/Brats 2021/data"
+      normalization: true
+      augmentation: false  
+      
+  test_split: 0.2
+  validation_split: 0.1
+data_loader:
+  train: 
+    batch_size: 2
+    shuffle: true
+    num_workers: 14
+    pin_memory: true
+    persistent_workers: true
+  validation: 
+    batch_size: 1
+    shuffle: false
+    num_workers: 14
+    pin_memory: true
+    persistent_workers: true
+  test:
+    batch_size: 1
+    shuffle: false
+    num_workers: 14
+    pin_memory: false
+    persistent_workers: true
+training:
+  optimizer:
+    name: 'SGD'
+    params:
+      lr: 0.01
+      momentum: 0.99
+      weight_decay : 0.00003
+      nesterov: true
+  criterion:    
+    params: 
+      dice_weight: 0.5
+      bce_weight: 0.5
+  scheduler:
+    name: 'CustomDecayLR'
+    params:
+      max_epochs: 1000
+  epochs: 1000
+model: 
+  name: 'UNETRPP3D_AdamW_without_deep_decay'
+  params:
+    in_channels: 4
+    out_channels: 4
+    do_ds: false
+    num_heads: 4
+    dims: [32, 64, 128, 256]
+    depths: [3, 3, 3, 3]
+
+use_sliding_window: true
+sliding_window_params:
+  overlap: 0.5
+  mode: 'gaussian'
+

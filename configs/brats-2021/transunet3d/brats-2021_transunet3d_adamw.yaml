@@ -1,0 +1,113 @@
+is3d: true
+checkpoints:
+  continue_training: false
+  test_mode: false
+  ckpt_path: '/cabinet/yousef/best.pt'
+  log_pictures: false
+  save_nifty: true
+dataset:
+  name: "brats_2021_loader"
+  input_size: [128,128,128]
+  train:
+    params:
+      # data_root: "E:/Brats 2018 data"
+      data_root: "/cabinet/dataset/brats/Brats 2021/data"
+      normalization: true
+      augmentation: true  
+      p: 0.5
+      
+  validation:
+    params:
+      # data_root: "E:/Brats 2018 data"
+      data_root: "/cabinet/dataset/brats/Brats 2021/data"
+      normalization: true
+      augmentation: false 
+       
+  test:
+    params:
+      # data_root: "E:/Brats 2018 data"
+      data_root: "/cabinet/dataset/brats/Brats 2021/data"
+      normalization: true
+      augmentation: false
+        
+  test_split: 0.2
+  validation_split: 0.1
+data_loader:
+  train: 
+    batch_size: 2
+    shuffle: true
+    num_workers: 14
+    pin_memory: true
+    persistent_workers: true
+  validation: 
+    batch_size: 1
+    shuffle: false
+    num_workers: 14
+    pin_memory: true
+    persistent_workers: true
+  test:
+    batch_size: 1
+    shuffle: false
+    num_workers: 14
+    pin_memory: false
+    persistent_workers: true
+training:
+  optimizer:
+    name: 'AdamW'
+    params:
+      lr: 0.0003
+  criterion:
+    params: 
+      dice_weight: 0.5
+      bce_weight: 0.5
+      global_weight: 1
+      blob_weight: 0.0
+      blob_params:
+        hd_loss: false
+        dice_loss: true
+  scheduler:
+    name: 'LinearWarmupCosineAnnealingLR'
+    params:
+        warmup_epochs: 10
+        max_epochs: 300
+        warmup_start_lr: 0.000001
+  epochs: 300
+model:
+  name: 'TransUnet3D_AdamW'
+  params:
+    input_channels: 4
+    base_num_features: 64
+    num_classes: 3
+    num_pool: 5
+    # these two must be set together
+    is_max: False  # disable decoder
+    is_max_hungarian: False # turn off hungarian matching
+
+    is_masked_attn: True
+    max_dec_layers: 3
+    is_max_bottleneck_transformer: True
+    vit_depth: 12
+    vit_hidden_size: 768
+    vit_mlp_dim: 3072
+    vit_num_heads: 12
+    max_msda: ''
+    is_max_ms: True # num_feature_levels: 3; default fpn downsampled to os244
+    max_ms_idxs: [ -4, -3, -2 ]
+    max_hidden_dim: 192
+    mw: 1.0
+    is_max_ds: True
+    is_masking: True
+    num_queries: 20
+    is_max_cls: True
+    is_mhsa_float32: True
+    is_vit_pretrain: True
+    vit_layer_scale: True
+    patch_size: [128,128,128]
+    pool_op_kernel_sizes: [[2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2]]
+    deep_supervision: true
+    # max_num_features: 256
+    # convolutional_upsampling: False
+use_sliding_window: true
+sliding_window_params:
+  overlap: 0.5
+  mode: 'gaussian'

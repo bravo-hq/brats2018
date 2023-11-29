@@ -231,8 +231,3 @@ def save_with_different_thresholds(preds, name, name_dir, threshold=0.4, device=
         nib.save(
             preds_img, os.path.join(name_dir, f"{name}-pred-{_type}-{threshold}.nii.gz")
         )
-
-
-
-
-

@@ -53,7 +53,7 @@ def get_base_directory():
 def configure_logger(config, parent_dir):
     if config["LRZ_node"]:
         path = os.path.join(
-            f"/cabinet/yousef/brats2018/",
+            f"/cabinet/yousef/{''.join(config['dataset']['name'].split('_')[0:2])}/",
             "tb_logs",
         )
     else:
@@ -120,7 +120,9 @@ def main():
     # )
 
     args = parse_arguments()
-    CONFIG_NAME = f"metastasis_seg/{args.config.split('_')[1]}/{args.config}.yaml"
+    CONFIG_NAME = (
+        f"{args.config.split('_')[0]}/{args.config.split('_')[1]}/{args.config}.yaml"
+    )
     # CONFIG_NAME = "metastasis_seg/unet/met_unet_adam.yaml"
     CONFIG_FILE_PATH = os.path.join(BASE_DIR, "configs", CONFIG_NAME)
 
@@ -148,7 +150,6 @@ def main():
     ckpt_path = None
     if config["checkpoints"]["continue_training"]:
         ckpt_path = config["checkpoints"]["ckpt_path"]
-    
 
     if not just_test:
         model = lightning_module(config, model=network)
@@ -179,8 +180,12 @@ def main():
             os.makedirs(logger.log_dir, exist_ok=True)
             with open(os.path.join(logger.log_dir, "hpram.yaml"), "w") as yaml_file:
                 yaml.dump(config, yaml_file)
-            trainer.fit(model, train_dataloaders=tr_loader, val_dataloaders=vl_loader, ckpt_path=ckpt_path)
-
+            trainer.fit(
+                model,
+                train_dataloaders=tr_loader,
+                val_dataloaders=vl_loader,
+                ckpt_path=ckpt_path,
+            )
 
         print(f"testing {CONFIG_NAME}")
         trainer.test(
