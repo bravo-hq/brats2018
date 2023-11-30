@@ -128,7 +128,7 @@ def d_lka_net_synapse(config):
         TransformerBlock,
     )
 
-    return D_LKA_Net(trans_block=TransformerBlock, **config["model"]["params"])
+    return D_LKA_Net(trans_block=TransformerBlock_3D_single_deform_LKA, **config["model"]["params"])
 
 
 def get_vnet(config):
