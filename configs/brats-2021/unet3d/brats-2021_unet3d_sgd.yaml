@@ -24,8 +24,8 @@ dataset:
       # data_root: "E:/Brats 2018 data"
       data_root: "/cabinet/dataset/brats/Brats 2021/data"
       normalization: true
-  test_split: 0.1
-  validation_split: 0.1
+  test_split: 0.15
+  validation_split: 0.05
 
 data_loader:
   train: 
