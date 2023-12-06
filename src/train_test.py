@@ -74,7 +74,7 @@ def configure_trainer(config, logger):
         monitor="val_loss", min_delta=0.0001, patience=25, verbose=True, mode="min"
     )
     lr_monitor = LearningRateMonitor(logging_interval="epoch")
-    check_val_every_n_epoch = config.get("check_val_every_n_epoch",1)
+    check_val_every_n_epoch = config.get("check_val_every_n_epoch", 1)
     return Trainer(
         logger=logger,
         # callbacks=[checkpoint_callback, early_stop_callback],
