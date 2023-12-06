@@ -5,7 +5,7 @@ checkpoints:
   ckpt_path: '/cabinet/yousef/brats2018/tb_logs/UNETR3D_AdamW/version_0/UNETR3D_AdamW-epoch=983-val_loss=0.1389.ckpt'
   log_pictures: false
 dataset:
-  name: "brats_2018_loader"
+  name: "brats2018_loader"
   input_size: [128,128,128]
   train:
     params:

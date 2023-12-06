@@ -5,7 +5,7 @@ checkpoints:
   ckpt_path: 'saved_models/met_unet/TranscUnet_Adam_2021-10-20_16-00-00/checkpoints/epoch=299.ckpt'
   log_pictures: false
 dataset:
-  name: "brats_2021_loader"
+  name: "brats2021_loader"
   input_size: [128,128,160]
   train:
     params:

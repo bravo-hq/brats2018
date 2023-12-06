@@ -1,5 +1,6 @@
-from .brats2018 import brats_2018_loader
-from .brats2021 import brats_2021_loader
+from .brats2018 import brats2018_loader
+from .brats2021 import brats2021_loader
+from .acdc import acdc_loader
 
 
 def get_dataloaders(config, mode_or_modes):

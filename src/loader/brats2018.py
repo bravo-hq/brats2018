@@ -34,7 +34,7 @@ def create_brats_dataset_fast(config: dict, mode: str):
     )
 
 
-def brats_2018_loader(config, verbose: bool = True) -> dict:
+def brats2018_loader(config, verbose: bool = True) -> dict:
     # train_list, val_list = split_dataset(
     #     config["path_to_data"], float(config["test_p"])
     # )

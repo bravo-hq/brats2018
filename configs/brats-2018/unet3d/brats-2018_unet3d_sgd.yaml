@@ -6,7 +6,7 @@ checkpoints:
   log_pictures: false
 
 dataset:
-  name: "brats_2018_loader"
+  name: "brats2018_loader"
   input_size: [128,128,128]
   train:
     params:
