@@ -83,3 +83,5 @@ use_sliding_window: true
 sliding_window_params:
   overlap: 0.5
   mode: 'gaussian'
+
+check_val_every_n_epoch: 20
