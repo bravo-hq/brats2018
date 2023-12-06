@@ -70,7 +70,7 @@ training:
         mode: 'min'
   epochs: 500
 model: 
-  name: 'DLK-Former_SGD_without_deep'
+  name: 'DLK-Former_SGD_without_deep_128'
   params:
     in_channels: 4
     out_channels: 4

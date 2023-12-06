@@ -17,6 +17,9 @@ from ..modules.vit.transformers import (
     TransformerBlock_Deform_LKA_Spatial_sequential,
     TransformerBlock_Deform_LKA_Spatial,
     TransformerBlock_3D_single_deform_LKA,
+    TransformerBlock_Deform_LKA_Channel_V2,
+    TransformerBlock_Deform_LKA_Spatial_V2,
+    TransformerBlock_3D_single_deform_LKA_V2,
 )
 
 from timm.models.layers import trunc_normal_
@@ -955,6 +958,30 @@ class BridgeModule(nn.Module):
         return outs[::-1]
 
 
+class TransformerBlock_Deform_LKA_SC(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        self.dlka_s = TransformerBlock_Deform_LKA_Spatial(*args, **kwargs)
+        self.dlka_c = TransformerBlock_Deform_LKA_Channel(*args, **kwargs)
+
+    def forward(self, x):
+        s_a = self.dlka_s(x)
+        c_a = self.dlka_c(x)
+        return s_a + c_a
+
+
+class TransformerBlock_Deform_LKA_SC_V2(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        self.dlka_s = TransformerBlock_Deform_LKA_Spatial_V2(*args, **kwargs)
+        self.dlka_c = TransformerBlock_Deform_LKA_Channel_V2(*args, **kwargs)
+
+    def forward(self, x):
+        s_a = self.dlka_s(x)
+        c_a = self.dlka_c(x)
+        return s_a + c_a
+
+
 class Model_Bridge(nn.Module):
     def __init__(
         self,
@@ -980,7 +1007,9 @@ class Model_Bridge(nn.Module):
         hyb_tf_num_heads=[4, 4, 4],
         hyb_tf_dropouts=0.15,
         hyb_deforms=[False, False],
+        hyb_tf_block=0,
         # bridge params
+        br_use=True,
         br_skip_levels=[0, 1, 2, 3],
         br_c_attn_use=True,
         br_s_att_use=True,
@@ -1002,11 +1031,25 @@ class Model_Bridge(nn.Module):
         dec_cnn_features=None,
         dec_cnn_dropouts=None,
         dec_hyb_deforms=None,
+        dec_hyb_tf_block=None,
     ):
         super().__init__()
         self.do_ds = do_ds
 
+        # tf attn blocks
+        tf_blocks = {
+            "0": TransformerBlock_Deform_LKA_Channel,
+            "1": TransformerBlock_Deform_LKA_Channel_V2,
+            "2": TransformerBlock_Deform_LKA_Spatial,
+            "3": TransformerBlock_Deform_LKA_Spatial_V2,
+            "4": TransformerBlock_3D_single_deform_LKA,
+            "5": TransformerBlock_3D_single_deform_LKA_V2,
+            "6": TransformerBlock_Deform_LKA_SC,
+            "7": TransformerBlock_Deform_LKA_SC_V2,
+        }
+
         # bridge params
+        self.br_use = br_use
         self.br_skip_levels = br_skip_levels
         self.br_c_attn_use = br_c_attn_use
         self.br_s_att_use = br_s_att_use
@@ -1078,6 +1121,8 @@ class Model_Bridge(nn.Module):
             dec_cnn_dropouts = cnn_dropouts[::-1]
         if not dec_cnn_deforms:
             dec_cnn_deforms = cnn_deforms[::-1]
+        if dec_hyb_tf_block == None:
+            dec_hyb_tf_block = hyb_tf_block
 
         # calculate spatial_shapes in encoder and decoder diferent layers
         enc_spatial_shaps = [spatial_shapes]
@@ -1139,7 +1184,7 @@ class Model_Bridge(nn.Module):
             tf_repeats=hyb_tf_repeats,
             tf_num_heads=hyb_tf_num_heads,
             tf_dropouts=hyb_tf_dropouts,
-            trans_block=TransformerBlock_Deform_LKA_Channel,
+            trans_block=tf_blocks[str(hyb_tf_block)],
         )
 
         # ------------------------------------- Decoder --------------------------------
@@ -1160,7 +1205,7 @@ class Model_Bridge(nn.Module):
             tf_repeats=hyb_tf_repeats,
             tf_num_heads=hyb_tf_num_heads,
             tf_dropouts=hyb_tf_dropouts,
-            trans_block=TransformerBlock_Deform_LKA_Channel,
+            trans_block=tf_blocks[str(dec_hyb_tf_block)],
         )
 
         self.cnn_decoder = CNNDecoder(
@@ -1183,18 +1228,21 @@ class Model_Bridge(nn.Module):
             dropout=0,
         )
 
-        feats = cnn_features + hyb_features[:-1]
-        self.bridge = BridgeModule(
-            feats=[feats[i] for i in self.br_skip_levels],
-            c_attn_block=GateChannelAttentionModule
-            if self.br_c_attn_use
-            else nn.Identity,
-            s_attn_block=partial(SKAttentionModule, groups=8)
-            if self.br_s_att_use
-            else nn.Identity,
-            m_attn_block=MultiScaleLKA3DModule if self.br_m_att_use else nn.Identity,
-            use_weigths=self.br_use_p_ttn_w,
-        )
+        if self.br_use:
+            feats = cnn_features + hyb_features[:-1]
+            self.bridge = BridgeModule(
+                feats=[feats[i] for i in self.br_skip_levels],
+                c_attn_block=GateChannelAttentionModule
+                if self.br_c_attn_use
+                else nn.Identity,
+                s_attn_block=partial(SKAttentionModule, groups=8)
+                if self.br_s_att_use
+                else nn.Identity,
+                m_attn_block=MultiScaleLKA3DModule
+                if self.br_m_att_use
+                else nn.Identity,
+                use_weigths=self.br_use_p_ttn_w,
+            )
 
         self.num_classes = out_channels
 
@@ -1207,15 +1255,16 @@ class Model_Bridge(nn.Module):
         x, hyb_skips = self.hyb_encoder(x)
         # print(f"after x, hyb_skips = self.hyb_encoder(x) | x:{x.shape}")
 
-        skips = cnn_skips + hyb_skips[:-1]
-        r_skips = self.bridge(*[skips[i] for i in self.br_skip_levels])
+        if self.br_use:
+            skips = cnn_skips + hyb_skips[:-1]
+            r_skips = self.bridge(*[skips[i] for i in self.br_skip_levels])
 
-        _skips = []
-        for i in range(len(skips)):
-            _skips.append(r_skips[i] if i in self.br_skip_levels else skips[i])
+            _skips = []
+            for i in range(len(skips)):
+                _skips.append(r_skips[i] if i in self.br_skip_levels else skips[i])
 
-        cnn_skips = _skips[: len(cnn_skips)]
-        hyb_skips[:-1] = _skips[len(cnn_skips) :]
+            cnn_skips = _skips[: len(cnn_skips)]
+            hyb_skips[:-1] = _skips[len(cnn_skips) :]
 
         if self.do_ds:
             x, hyb_outs = self.hyb_decoder(x, hyb_skips[:-1], return_outs=True)

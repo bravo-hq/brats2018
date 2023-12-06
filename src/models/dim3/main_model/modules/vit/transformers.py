@@ -718,6 +718,71 @@ class TransformerBlock_3D_single_deform_LKA(nn.Module):
         return x
 
 
+class TransformerBlock_3D_single_deform_LKA_V2(nn.Module):
+    """
+    A transformer block, based on: "Shaker et al.,
+    UNETR++: Delving into Efficient and Accurate 3D Medical Image Segmentation"
+    """
+
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        proj_size: int,
+        num_heads: int,
+        dropout_rate: float = 0.0,
+        pos_embed=False,
+    ) -> None:
+        """
+        Args:
+            input_size: the size of the input for each stage.
+            hidden_size: dimension of hidden layer.
+            proj_size: projection size for keys and values in the spatial attention module.
+            num_heads: number of attention heads.
+            dropout_rate: faction of the input units to drop.
+            pos_embed: bool argument to determine if positional embedding is used.
+
+        """
+
+        super().__init__()
+        print("Using LKA Attention with one deformable layer")
+
+        if not (0 <= dropout_rate <= 1):
+            raise ValueError("dropout_rate should be between 0 and 1.")
+
+        if hidden_size % num_heads != 0:
+            print("Hidden size is ", hidden_size)
+            print("Num heads is ", num_heads)
+            raise ValueError("hidden_size should be divisible by num_heads.")
+
+        self.norm = nn.LayerNorm(hidden_size)
+        self.gamma = nn.Parameter(1e-6 * torch.ones(hidden_size), requires_grad=True)
+        self.epa_block = LKA_Attention3d_deform(d_model=hidden_size)
+        self.conv1 = UnetResBlock(
+            3, hidden_size, hidden_size, kernel_size=1, stride=1, norm_name="batch"
+        )
+
+        self.pos_embed = None
+        if pos_embed:
+            self.pos_embed = nn.Parameter(torch.zeros(1, input_size, hidden_size))
+
+    def forward(self, x):
+        B, C, H, W, D = x.shape
+
+        x = x.reshape(B, C, H * W * D).permute(0, 2, 1)
+
+        if self.pos_embed is not None:
+            x = x + self.pos_embed
+        attn = x + self.gamma * self.epa_block(self.norm(x), B, C, H, W, D)
+
+        attn_skip = attn.reshape(B, H, W, D, C).permute(
+            0, 4, 1, 2, 3
+        )  # (B, C, H, W, D)
+        x = attn_skip + self.conv1(attn_skip)
+
+        return x
+
+
 class LKA3d_deform(nn.Module):
     def __init__(self, dim):
         super().__init__()
@@ -1761,6 +1826,72 @@ class TransformerBlock_Deform_LKA_Channel(nn.Module):
         return x
 
 
+class TransformerBlock_Deform_LKA_Channel_V2(nn.Module):
+    """
+    A transformer block, based on: "Shaker et al.,
+    UNETR++: Delving into Efficient and Accurate 3D Medical Image Segmentation"
+    With LKA and channel attention
+    """
+
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        proj_size: int,
+        num_heads: int,
+        dropout_rate: float = 0.0,
+        pos_embed=False,
+    ) -> None:
+        """
+        Args:
+            input_size: the size of the input for each stage.
+            hidden_size: dimension of hidden layer.
+            proj_size: projection size for keys and values in the spatial attention module.
+            num_heads: number of attention heads.
+            dropout_rate: faction of the input units to drop.
+            pos_embed: bool argument to determine if positional embedding is used.
+
+        """
+
+        super().__init__()
+        print("Using Deform LKA and Channel Attention")
+
+        if not (0 <= dropout_rate <= 1):
+            raise ValueError("dropout_rate should be between 0 and 1.")
+
+        if hidden_size % num_heads != 0:
+            print("Hidden size is ", hidden_size)
+            print("Num heads is ", num_heads)
+            raise ValueError("hidden_size should be divisible by num_heads.")
+
+        self.norm = nn.LayerNorm(hidden_size)
+        self.gamma = nn.Parameter(1e-6 * torch.ones(hidden_size), requires_grad=True)
+        self.epa_block = ChannelAttention_Deform_LKA(hidden_size=hidden_size)
+        self.conv1 = UnetResBlock(
+            3, hidden_size, hidden_size, kernel_size=1, stride=1, norm_name="batch"
+        )
+
+        self.pos_embed = None
+        if pos_embed:
+            self.pos_embed = nn.Parameter(torch.zeros(1, input_size, hidden_size))
+
+    def forward(self, x):
+        B, C, H, W, D = x.shape
+
+        x = x.reshape(B, C, H * W * D).permute(0, 2, 1)
+
+        if self.pos_embed is not None:
+            x = x + self.pos_embed
+        attn = x + self.gamma * self.epa_block(self.norm(x), B, C, H, W, D)
+
+        attn_skip = attn.reshape(B, H, W, D, C).permute(
+            0, 4, 1, 2, 3
+        )  # (B, C, H, W, D)
+        x = attn_skip + self.conv1(attn_skip)
+
+        return x
+
+
 class LKA3d_Deform_Channel(nn.Module):
     def __init__(self, dim):
         super().__init__()
@@ -2484,6 +2615,74 @@ class TransformerBlock_Deform_LKA_Spatial(nn.Module):
         )  # (B, C, H, W, D)
         attn = self.conv51(attn_skip)
         x = attn_skip + self.conv8(attn)
+
+        return x
+
+
+class TransformerBlock_Deform_LKA_Spatial_V2(nn.Module):
+    """
+    A transformer block, based on: "Shaker et al.,
+    UNETR++: Delving into Efficient and Accurate 3D Medical Image Segmentation"
+    With LKA and spatial attention
+    """
+
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        proj_size: int,
+        num_heads: int,
+        dropout_rate: float = 0.0,
+        pos_embed=False,
+    ) -> None:
+        """
+        Args:
+            input_size: the size of the input for each stage.
+            hidden_size: dimension of hidden layer.
+            proj_size: projection size for keys and values in the spatial attention module.
+            num_heads: number of attention heads.
+            dropout_rate: faction of the input units to drop.
+            pos_embed: bool argument to determine if positional embedding is used.
+
+        """
+
+        super().__init__()
+        print("Using Deform LKA kernel sizes and Spatial Attention")
+
+        if not (0 <= dropout_rate <= 1):
+            raise ValueError("dropout_rate should be between 0 and 1.")
+
+        if hidden_size % num_heads != 0:
+            print("Hidden size is ", hidden_size)
+            print("Num heads is ", num_heads)
+            raise ValueError("hidden_size should be divisible by num_heads.")
+
+        self.norm = nn.LayerNorm(hidden_size)
+        self.gamma = nn.Parameter(1e-6 * torch.ones(hidden_size), requires_grad=True)
+        self.epa_block = SpatialAttention_Deform_LKA(
+            input_size=input_size, hidden_size=hidden_size, proj_size=proj_size
+        )
+        self.conv1 = UnetResBlock(
+            3, hidden_size, hidden_size, kernel_size=1, stride=1, norm_name="batch"
+        )
+
+        self.pos_embed = None
+        if pos_embed:
+            self.pos_embed = nn.Parameter(torch.zeros(1, input_size, hidden_size))
+
+    def forward(self, x):
+        B, C, H, W, D = x.shape
+
+        x = x.reshape(B, C, H * W * D).permute(0, 2, 1)
+
+        if self.pos_embed is not None:
+            x = x + self.pos_embed
+        attn = x + self.gamma * self.epa_block(self.norm(x), B, C, H, W, D)
+
+        attn_skip = attn.reshape(B, H, W, D, C).permute(
+            0, 4, 1, 2, 3
+        )  # (B, C, H, W, D)
+        x = attn_skip + self.conv1(attn_skip)
 
         return x
 

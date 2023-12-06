@@ -177,9 +177,7 @@ class DLKAFormer_DecoderBlock(BaseBlock):
                         padding=get_padding(cnn_kernel_size, stride=1),
                     ),
                     nn.BatchNorm3d(cnn_out_channels),
-                    # nn.LayerNorm(cnn_out_channels),
-                    # nn.BatchNorm3d(cnn_out_channels),
-                    # nn.BatchNorm3d(out_channels),
+                    nn.LayerNorm([cnn_out_channels]),
                     nn.PReLU(),
                 )
             else:
