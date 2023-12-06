@@ -6,7 +6,7 @@ checkpoints:
   log_pictures: false
 dataset:
   name: "brats_2018_loader"
-  input_size: [96,96,96]
+  input_size: [128,128,128]
   train:
     params:
       # data_root: "E:/Brats 2018 data"
@@ -64,7 +64,7 @@ training:
         mode: 'min'
   epochs: 300
 model: 
-  name: 'ResUNet3D_SGD'
+  name: 'ResUNet3D_SGD_128'
   params:
     in_channels: 4
     out_channels: 4

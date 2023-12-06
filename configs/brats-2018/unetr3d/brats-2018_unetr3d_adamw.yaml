@@ -6,7 +6,7 @@ checkpoints:
   log_pictures: false
 dataset:
   name: "brats_2018_loader"
-  input_size: [96,96,96]
+  input_size: [128,128,128]
   train:
     params:
       # data_root: "E:/Brats 2018 data"
@@ -68,13 +68,13 @@ training:
     name: 'ReduceLROnPlateau'
     params:
         factor: 0.5
-        patience: 7
+        patience: 9
         mode: 'min'
   epochs: 1000
 model: 
-  name: 'UNETR3D_AdamW'
+  name: 'UNETR3D_AdamW_128'
   params:
-    img_size: [96,96,96]
+    img_size: [128,128,128]
     spatial_dims: 3
     in_channels: 4
     out_channels: 4
