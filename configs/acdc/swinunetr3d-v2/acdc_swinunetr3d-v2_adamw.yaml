@@ -9,23 +9,23 @@ dataset:
   input_size: [160,160,32]
   train:
     params:
-      data_root: "D:\\DATASETS\\ACDC\\ACDC\\database\\training"
-      # data_root: "/cabinet/dataset/ACDC/ACDC/database/training"
+      # data_root: "D:\\DATASETS\\ACDC\\ACDC\\database\\training"
+      data_root: "/cabinet/dataset/ACDC/ACDC/database/training"
       normalization: true
       augmentation: true  
       p: 0.5
       
   validation:
     params:
-      data_root: "D:\\DATASETS\\ACDC\\ACDC\\database\\training"
-      # data_root: "/cabinet/dataset/ACDC/ACDC/database/training"
+      # data_root: "D:\\DATASETS\\ACDC\\ACDC\\database\\training"
+      data_root: "/cabinet/dataset/ACDC/ACDC/database/training"
       normalization: true
       augmentation: false
         
   test:
     params:
-      data_root: "D:\\DATASETS\\ACDC\\ACDC\\database\\training"
-      # data_root: "/cabinet/dataset/ACDC/ACDC/database/training"
+      # data_root: "D:\\DATASETS\\ACDC\\ACDC\\database\\training"
+      data_root: "/cabinet/dataset/ACDC/ACDC/database/training"
       normalization: true
       augmentation: false
         
