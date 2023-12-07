@@ -84,4 +84,4 @@ sliding_window_params:
   overlap: 0.5
   mode: 'gaussian'
 
-check_val_every_n_epoch: 20
+# check_val_every_n_epoch: 20
