@@ -17,9 +17,11 @@ from ..modules.vit.transformers import (
     TransformerBlock_Deform_LKA_Spatial_sequential,
     TransformerBlock_Deform_LKA_Spatial,
     TransformerBlock_3D_single_deform_LKA,
+    
     TransformerBlock_Deform_LKA_Channel_V2,
     TransformerBlock_Deform_LKA_Spatial_V2,
     TransformerBlock_3D_single_deform_LKA_V2,
+    
 )
 
 from timm.models.layers import trunc_normal_
@@ -948,6 +950,7 @@ class BridgeModule(nn.Module):
                 att = self.c_w[i] * c_att + self.s_w[i] * s_att + self.m_w[i] * m_att
             else:
                 att = c_att + s_att + m_att
+            att = F.layer_norm(att, normalized_shape=att.shape[2:])
 
             x = norm(att + x)
             outs.append(x)
@@ -963,24 +966,24 @@ class TransformerBlock_Deform_LKA_SC(nn.Module):
         super().__init__()
         self.dlka_s = TransformerBlock_Deform_LKA_Spatial(*args, **kwargs)
         self.dlka_c = TransformerBlock_Deform_LKA_Channel(*args, **kwargs)
-
     def forward(self, x):
         s_a = self.dlka_s(x)
         c_a = self.dlka_c(x)
-        return s_a + c_a
-
+        sc_a = s_a + c_a
+        return F.layer_norm(sc_a, normalized_shape=sc_a.shape[2:])
 
 class TransformerBlock_Deform_LKA_SC_V2(nn.Module):
     def __init__(self, *args, **kwargs):
         super().__init__()
         self.dlka_s = TransformerBlock_Deform_LKA_Spatial_V2(*args, **kwargs)
         self.dlka_c = TransformerBlock_Deform_LKA_Channel_V2(*args, **kwargs)
-
     def forward(self, x):
         s_a = self.dlka_s(x)
         c_a = self.dlka_c(x)
-        return s_a + c_a
+        sc_a = s_a + c_a
+        return F.layer_norm(sc_a, normalized_shape=sc_a.shape[2:])
 
+        
 
 class Model_Bridge(nn.Module):
     def __init__(
@@ -1035,19 +1038,19 @@ class Model_Bridge(nn.Module):
     ):
         super().__init__()
         self.do_ds = do_ds
-
+        
         # tf attn blocks
         tf_blocks = {
-            "0": TransformerBlock_Deform_LKA_Channel,
-            "1": TransformerBlock_Deform_LKA_Channel_V2,
-            "2": TransformerBlock_Deform_LKA_Spatial,
-            "3": TransformerBlock_Deform_LKA_Spatial_V2,
-            "4": TransformerBlock_3D_single_deform_LKA,
-            "5": TransformerBlock_3D_single_deform_LKA_V2,
-            "6": TransformerBlock_Deform_LKA_SC,
-            "7": TransformerBlock_Deform_LKA_SC_V2,
+            "0" : TransformerBlock_Deform_LKA_Channel,
+            "1" : TransformerBlock_Deform_LKA_Channel_V2,
+            "2" : TransformerBlock_Deform_LKA_Spatial,
+            "3" : TransformerBlock_Deform_LKA_Spatial_V2,
+            "4" : TransformerBlock_3D_single_deform_LKA,
+            "5" : TransformerBlock_3D_single_deform_LKA_V2,
+            "6" : TransformerBlock_Deform_LKA_SC,
+            "7" : TransformerBlock_Deform_LKA_SC_V2
         }
-
+        
         # bridge params
         self.br_use = br_use
         self.br_skip_levels = br_skip_levels
@@ -1238,9 +1241,7 @@ class Model_Bridge(nn.Module):
                 s_attn_block=partial(SKAttentionModule, groups=8)
                 if self.br_s_att_use
                 else nn.Identity,
-                m_attn_block=MultiScaleLKA3DModule
-                if self.br_m_att_use
-                else nn.Identity,
+                m_attn_block=MultiScaleLKA3DModule if self.br_m_att_use else nn.Identity,
                 use_weigths=self.br_use_p_ttn_w,
             )
 
