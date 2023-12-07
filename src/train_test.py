@@ -96,7 +96,7 @@ def get_platform():
 def get_input_size_and_module(config):
     summary_input_size = (
         config["data_loader"]["train"]["batch_size"],
-        4 if (config['dataset']['name'].split('_')[0])!= 'acdc' else 1,
+        4 if (config["dataset"]["name"].split("_")[0]) != "acdc" else 1,
         config["dataset"]["input_size"][2],
         config["dataset"]["input_size"][0],
         config["dataset"]["input_size"][1],

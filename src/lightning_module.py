@@ -34,10 +34,12 @@ class SemanticSegmentation3D(pl.LightningModule):
         ## Initialize metrics for each type and mode
         modes = ["tr", "vl", "te"]
         self.modes_dict = {"tr": "train", "vl": "val", "te": "test"}
-        
-        self.datatype = (config['dataset']['name'].split('_')[0]).lower()
-        
-        self.types = ["wt", "tc", "et"] if self.datatype != 'acdc' else ['rv', 'myo', 'lv']
+
+        self.datatype = (config["dataset"]["name"].split("_")[0]).lower()
+
+        self.types = (
+            ["wt", "tc", "et"] if self.datatype != "acdc" else ["rv", "myo", "lv"]
+        )
 
         self.metrics = {}
         for mode in modes:
@@ -229,7 +231,7 @@ class SemanticSegmentation3D(pl.LightningModule):
         self, preds: torch.Tensor, gts: torch.Tensor, stage: str
     ) -> None:
         metrics = self.metrics[stage]
-        if self.datatype == 'acdc':
+        if self.datatype == "acdc":
             preds_list, gts_list = self._contstruct_rv_myo_lv(preds, gts)
         else:
             preds_list, gts_list = self._contstruct_wt_tc_et(preds, gts)
@@ -293,10 +295,9 @@ class SemanticSegmentation3D(pl.LightningModule):
         gts_list = []
         preds_labels = torch.argmax(F.softmax(preds, dim=1), dim=1).unsqueeze(1)
         for i, type in enumerate(["rv", "myo", "lv"]):
-            preds_list.append((preds_labels == i+1).type(torch.uint8))
-            gts_list.append((gts == i+1).type(torch.uint8))
+            preds_list.append((preds_labels == i + 1).type(torch.uint8))
+            gts_list.append((gts == i + 1).type(torch.uint8))
         return preds_list, gts_list
-
 
     def _contstruct_wt_tc_et(
         self, preds: torch.Tensor, gts: torch.Tensor
