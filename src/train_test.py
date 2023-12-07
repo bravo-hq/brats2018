@@ -53,7 +53,7 @@ def get_base_directory():
 def configure_logger(config, parent_dir):
     if config["LRZ_node"]:
         path = os.path.join(
-            f"/cabinet/yousef/{''.join(config['dataset']['name'].split('_')[0:2])}/",
+            f"/cabinet/yousef/{(config['dataset']['name'].split('_')[0])}/",
             "tb_logs",
         )
     else:
@@ -96,7 +96,7 @@ def get_platform():
 def get_input_size_and_module(config):
     summary_input_size = (
         config["data_loader"]["train"]["batch_size"],
-        4,
+        4 if (config['dataset']['name'].split('_')[0])!= 'acdc' else 1,
         config["dataset"]["input_size"][2],
         config["dataset"]["input_size"][0],
         config["dataset"]["input_size"][1],

@@ -34,12 +34,15 @@ class SemanticSegmentation3D(pl.LightningModule):
         ## Initialize metrics for each type and mode
         modes = ["tr", "vl", "te"]
         self.modes_dict = {"tr": "train", "vl": "val", "te": "test"}
-        types = ["wt", "tc", "et"]
+        
+        self.datatype = (config['dataset']['name'].split('_')[0]).lower()
+        
+        self.types = ["wt", "tc", "et"] if self.datatype != 'acdc' else ['rv', 'myo', 'lv']
 
         self.metrics = {}
         for mode in modes:
             self.metrics[mode] = {}
-            for type_ in types:
+            for type_ in self.types:
                 metric_name = f"metrics_{self.modes_dict[mode]}_{type_}"
                 self.metrics[mode][type_] = (
                     get_binary_metrics(mode=mode)
@@ -84,7 +87,7 @@ class SemanticSegmentation3D(pl.LightningModule):
         return imgs, msks
 
     def on_epoch_end(self, stage: str):
-        for type_ in ["wt", "tc", "et"]:
+        for type_ in self.types:
             metric = self.metrics[stage][type_].compute()
             self.log_dict({f"{k}": v for k, v in metric.items()})
             self.metrics[stage][type_].reset()
@@ -226,8 +229,11 @@ class SemanticSegmentation3D(pl.LightningModule):
         self, preds: torch.Tensor, gts: torch.Tensor, stage: str
     ) -> None:
         metrics = self.metrics[stage]
-        preds_list, gts_list = self._contstruct_wt_tc_et(preds, gts)
-        for index, type_ in enumerate(["wt", "tc", "et"]):
+        if self.datatype == 'acdc':
+            preds_list, gts_list = self._contstruct_rv_myo_lv(preds, gts)
+        else:
+            preds_list, gts_list = self._contstruct_wt_tc_et(preds, gts)
+        for index, type_ in enumerate(self.types):
             pred = preds_list[index].float()
             gt = gts_list[index].type(torch.uint8)
             metrics[type_].to(self.device)
@@ -279,6 +285,17 @@ class SemanticSegmentation3D(pl.LightningModule):
         os.makedirs(name_dir, exist_ok=True)
         nib.save(mask_img, os.path.join(name_dir, f"{name}-seg.nii.gz"))
         nib.save(preds_img, os.path.join(name_dir, f"{name}-pred.nii.gz"))
+
+    def _contstruct_rv_myo_lv(
+        self, preds: torch.Tensor, gts: torch.Tensor
+    ) -> (list, list):
+        preds_list = []
+        gts_list = []
+        preds_labels = torch.argmax(F.softmax(preds, dim=1), dim=1).unsqueeze(1)
+        for i, type in enumerate(["rv", "myo", "lv"]):
+            preds_list.append((preds_labels == i+1).type(torch.uint8))
+            gts_list.append((gts == i+1).type(torch.uint8))
+
 
     def _contstruct_wt_tc_et(
         self, preds: torch.Tensor, gts: torch.Tensor
