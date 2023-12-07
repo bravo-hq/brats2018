@@ -102,7 +102,7 @@ model:
     is_mhsa_float32: True
     is_vit_pretrain: True
     vit_layer_scale: True
-    patch_size: [128,128,128]
+    patch_size: [32,160,160]
     pool_op_kernel_sizes: [[2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2]]
     deep_supervision: true
     # max_num_features: 256

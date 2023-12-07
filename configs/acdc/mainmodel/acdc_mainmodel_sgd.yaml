@@ -72,7 +72,7 @@ training:
 model: 
   name: 'MainModel_SGD_afshin_dnnn'
   params:
-    spatial_shapes: [128,128,128]
+    spatial_shapes: [32,160,160]
     in_channels: 1
     out_channels: 4
                  
