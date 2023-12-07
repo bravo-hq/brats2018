@@ -295,6 +295,7 @@ class SemanticSegmentation3D(pl.LightningModule):
         for i, type in enumerate(["rv", "myo", "lv"]):
             preds_list.append((preds_labels == i+1).type(torch.uint8))
             gts_list.append((gts == i+1).type(torch.uint8))
+        return preds_list, gts_list
 
 
     def _contstruct_wt_tc_et(
