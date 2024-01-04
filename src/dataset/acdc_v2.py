@@ -93,7 +93,7 @@ class ACDC(Dataset):
             "affinity": np.eye(4),
         }
         img= self.normlize(self.patients_data["img"][index])
-        seg = self.normalize(self.patients_data["seg"][index])
+        seg = self.normlize(self.patients_data["seg"][index])
         img=np.transpose(img,(1,2,0))
         seg=np.transpose(seg,(1,2,0))
         volumes = np.expand_dims(img,axis=0).astype(np.float32) # [1, H, W, D]
