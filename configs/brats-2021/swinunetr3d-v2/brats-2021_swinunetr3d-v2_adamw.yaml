@@ -72,7 +72,7 @@ training:
         warmup_start_lr: 0.000001
   epochs: 300
 model: 
-  name: 'SwinUNETR3D-v2_AdamW_128'
+  name: 'SwinUNETR3D-v2_AdamW'
   params:
     img_size: [128,128,128]
     spatial_dims: 3

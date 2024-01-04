@@ -11,5 +11,5 @@
 
 python3 --version
 nvidia-smi
-srun --container-image=/dss/dssfs04/lwp-dss-0002/pn36fu/pn36fu-dss-0000/env/pytorch-env.sqsh --container-mounts=/dss/dssfs04/lwp-dss-0002/pn36fu/pn36fu-dss-0000:/cabinet bash -c "python3 --version && cd && ./env.sh && cd deeplearning/brats2018/scripts && ./swinunetr3d_swinunetr3d-v2_unetr3d.sh"
+srun --container-image=/dss/dssfs04/lwp-dss-0002/pn36fu/pn36fu-dss-0000/env/pytorch-env.sqsh --container-mounts=/dss/dssfs04/lwp-dss-0002/pn36fu/pn36fu-dss-0000:/cabinet bash -c "python3 --version && cd && ./env.sh && cd deeplearning/brats2018 && python src/train_test.py -c brats-2021_swinunetr3d_adamw"
 

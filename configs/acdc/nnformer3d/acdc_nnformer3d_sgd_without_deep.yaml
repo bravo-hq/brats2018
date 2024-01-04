@@ -6,7 +6,7 @@ checkpoints:
   log_pictures: false
 dataset:
   name: "acdc_loader"
-  input_size: [160,160,32]
+  input_size: [160,160,14]
   train:
     params:
       # data_root: "D:\\DATASETS\\ACDC\\ACDC\\database\\training"
@@ -70,14 +70,15 @@ training:
 model: 
   name: 'nnFormer3d_SGD_without_deep'
   params:
-    crop_size: [32,160,160]
+    crop_size: [14,160,160]
     input_channels: 1
     num_classes: 4
     deep_supervision: false
-    patch_size: [4,4,4]
-    window_size: [4,4,8,4]
+    patch_size: [1,4,4]
+    window_size: [[3,5,5],[3,5,5],[7,10,10],[3,5,5]]
     num_heads: [3, 6, 12, 24]
     embedding_dim: 96
+    down_stride: [[1,4,4],[1,8,8],[2,16,16],[4,32,32]] 
 use_sliding_window: true
 sliding_window_params:
   overlap: 0.75
