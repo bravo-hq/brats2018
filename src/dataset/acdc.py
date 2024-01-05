@@ -68,6 +68,11 @@ class ACDC(Dataset):
 
         volumes = np.stack(volumes, axis=0).astype(np.float32)  # [C, H, W, D]
         seg_volume = np.expand_dims(seg_volume, axis=0).astype(np.uint8)  # [1, H, W, D]
+        
+        # correct the spacing
+        data_dict = self.sapcing_transform({"volume": volumes, "seg-volume": seg_volume})
+        volumes = data_dict["volume"]
+        seg_volume = data_dict["seg-volume"]
 
         if self.mode == "tr":
             volumes, seg_volume = self._aug_sample(volumes, seg_volume)
@@ -121,6 +126,8 @@ class ACDC(Dataset):
                 ),  # depth flip
             ]
         )
+        
+        self.sapcing_transform = T.Spacingd(keys=keys, pixdim=(1.25, 1.25, 10), mode="nearest")
 
     def _load_data(self, img_seg_pair):
         volumes = []
