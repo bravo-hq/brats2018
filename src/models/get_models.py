@@ -91,6 +91,11 @@ def get_main_model(config):
     return MainModel(**config["model"]["params"])
 
 
+def get_lhunet_model(config):
+    from models.dim3.lhunet.models.v4 import LHUNet as model
+
+    return model(**config["model"]["params"])
+
 def get_main_bridge_model(config):
     from models.dim3.main_model.models.main import Model_Bridge
 
@@ -163,6 +168,7 @@ MODEL_FACTORY = {
     "unetrpp3d": get_unetrpp,
     "dlk-former": d_lka_net_synapse,
     "vnet": get_vnet,
+    "lhunet": get_lhunet_model,
 }
 
 

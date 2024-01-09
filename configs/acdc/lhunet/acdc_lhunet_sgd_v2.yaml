@@ -1,0 +1,132 @@
+is3d: true
+checkpoints:
+  continue_training: false
+  test_mode: false
+  ckpt_path: '/cabinet/yousef/best.pt'
+  log_pictures: false
+  save_nifty: true
+dataset:
+  name: "acdc_v2_loader"
+  input_size: [160,160,14]
+  train:
+    params:
+      # data_root: "D:\\DATASETS\\ACDC\\ACDC\\database\\training"
+      data_root: "/cabinet/dataset/ACDC/ACDC/database/3Ddata"
+      normalization: true
+      augmentation: true  
+      p: 0.5
+
+  validation:
+    params:
+      # data_root: "D:\\DATASETS\\ACDC\\ACDC\\database\\training"
+      data_root: "/cabinet/dataset/ACDC/ACDC/database/3Ddata"
+      normalization: true
+      augmentation: false  
+
+  test:
+    params:
+      # data_root: "D:\\DATASETS\\ACDC\\ACDC\\database\\training"
+      data_root: "/cabinet/dataset/ACDC/ACDC/database/3Ddata"
+      normalization: true
+      augmentation: false 
+
+  test_split: 0.2
+  validation_split: 0.1
+data_loader:
+  train: 
+    batch_size: 2
+    shuffle: true
+    num_workers: 14
+    pin_memory: true
+    persistent_workers: true
+  validation: 
+    batch_size: 1
+    shuffle: false
+    num_workers: 14
+    pin_memory: true
+    persistent_workers: true
+  test:
+    batch_size: 1
+    shuffle: false
+    num_workers: 14
+    pin_memory: false
+    persistent_workers: true
+training:
+  optimizer:
+    name: 'SGD'
+    params:
+      lr: 0.01
+      momentum: 0.99
+      weight_decay : 0.00003
+      nesterov: true
+  criterion:
+    params: 
+      dice_weight: 0.5
+      bce_weight: 0.5
+  scheduler:
+    name: 'CustomDecayLR'
+    params:
+      max_epochs: 1000
+  epochs: 1000
+  
+model: 
+  name: 'lhUNET_SGD'
+  params:
+    spatial_shapes: [14, 160, 160]
+    do_ds: false # Deep Supervision
+    in_channels: 1
+    out_channels: 4
+        
+    # encoder params
+    cnn_kernel_sizes: [5,3]
+    cnn_features: [16,32]
+    cnn_strides: [2,2]
+    cnn_maxpools: [false, true]
+    cnn_dropouts: 0.0
+    cnn_blocks: nn # n: resunet, d: deformconv, b: basicunet
+    hyb_kernel_sizes: [3,3,3]
+    hyb_features: [32,64,128]
+    hyb_strides: [2,2,2]
+    hyb_maxpools: [true,true,true]
+    hyb_cnn_dropouts: 0.0
+    hyb_tf_proj_sizes: [64,128,256]
+    hyb_tf_repeats: [1,1,1]
+    hyb_tf_num_heads: [2,4,8]
+    hyb_tf_dropouts: 0.0
+    hyb_cnn_blocks: nnn # n: resunet, d: deformconv, b: basicunet
+    hyb_vit_blocks: SSC # s: dlka_special_v2, S: dlka_sp_seq, c: dlka_channel_v2, C: dlka_ch_seq
+    hyb_vit_sandwich: true 
+
+    # bridge 
+    br_use: true
+    br_skip_levels: [0,1,2,3]
+    br_c_attn_use: true 
+    br_s_att_use: true 
+    br_m_att_use: true 
+    br_use_p_ttn_w: true
+                
+    # decoder params
+    dec_hyb_tcv_kernel_sizes: [5,5,5]
+    dec_cnn_tcv_kernel_sizes: [5,7]
+    dec_cnn_blocks: null
+    dec_tcv_bias: false
+    dec_hyb_tcv_bias: false
+    dec_hyb_kernel_sizes: null
+    dec_hyb_features: null
+    dec_hyb_cnn_dropouts: null
+    dec_hyb_tf_proj_sizes: null
+    dec_hyb_tf_repeats: null
+    dec_hyb_tf_num_heads: null
+    dec_hyb_tf_dropouts: null
+    dec_cnn_kernel_sizes: null
+    dec_cnn_features: null
+    dec_cnn_dropouts: null
+    dec_hyb_cnn_blocks: null
+    dec_hyb_vit_blocks: null
+    dec_hyb_vit_sandwich: null
+
+
+use_sliding_window: true
+sliding_window_params:
+  overlap: 0.75
+  mode: 'gaussian'
