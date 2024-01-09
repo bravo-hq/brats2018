@@ -10,7 +10,7 @@ dataset:
   input_size: [128,128,128]
   train:
     params:
-      # data_root: "E:/Brats 2018 data"
+      # data_root: "/home/say26747/Desktop/Brats 2021/data"
       data_root: "/cabinet/dataset/brats/Brats 2021/data"
       normalization: true
       augmentation: true  
@@ -18,14 +18,14 @@ dataset:
 
   validation:
     params:
-      # data_root: "E:/Brats 2018 data"
+      # data_root: "/home/say26747/Desktop/Brats 2021/data"
       data_root: "/cabinet/dataset/brats/Brats 2021/data"
       normalization: true
       augmentation: false  
 
   test:
     params:
-      # data_root: "E:/Brats 2018 data"
+      # data_root: "/home/say26747/Desktop/Brats 2021/data"
       data_root: "/cabinet/dataset/brats/Brats 2021/data"
       normalization: true
       augmentation: false 

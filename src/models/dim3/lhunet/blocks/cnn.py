@@ -7,7 +7,7 @@ import torch.nn as nn
 from monai.networks.layers.utils import get_act_layer, get_norm_layer
 
 from .base import BaseBlock, get_conv_layer, get_padding
-from modules.deform_conv import DeformConvPack
+from ..modules.deform_conv import DeformConvPack
 
 
 __all__ = ['CNNEncoder', 'CNNDecoder', 'get_cnn_block']
