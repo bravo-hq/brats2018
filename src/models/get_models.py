@@ -96,6 +96,7 @@ def get_lhunet_model(config):
 
     return model(**config["model"]["params"])
 
+
 def get_main_bridge_model(config):
     from models.dim3.main_model.models.main import Model_Bridge
 

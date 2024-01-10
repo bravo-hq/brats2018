@@ -7,16 +7,13 @@ from ..blocks import *
 from ..blocks.base import BaseBlock
 
 
-
 __all__ = ["LHUNet"]
-
 
 
 """
 Not Sandwiching in Hybrid Blocks (conv-vit)
 Concatenating skips
 """
-
 
 
 class LHUNet(BaseBlock):
@@ -32,7 +29,7 @@ class LHUNet(BaseBlock):
         cnn_strides=[2, 2],
         cnn_maxpools=[0, 1],
         cnn_dropouts=0.1,
-        cnn_blocks='n',
+        cnn_blocks="n",
         hyb_kernel_sizes=[3, 3, 3],
         hyb_features=[128, 256, 512],
         hyb_strides=[2, 2, 2],
@@ -42,8 +39,8 @@ class LHUNet(BaseBlock):
         hyb_tf_repeats=[3, 3, 3],
         hyb_tf_num_heads=[4, 4, 4],
         hyb_tf_dropouts=0.15,
-        hyb_cnn_blocks='n', 
-        hyb_vit_blocks='s', 
+        hyb_cnn_blocks="n",
+        hyb_vit_blocks="s",
         hyb_vit_sandwich=False,
         # bridge params
         br_use=True,
@@ -57,7 +54,7 @@ class LHUNet(BaseBlock):
         dec_cnn_tcv_kernel_sizes=[5, 5, 5],
         dec_tcv_bias=False,
         dec_cnn_blocks=None,
-        dec_hyb_tcv_bias=False, 
+        dec_hyb_tcv_bias=False,
         dec_hyb_kernel_sizes=None,
         dec_hyb_features=None,
         dec_hyb_cnn_dropouts=None,
@@ -68,7 +65,7 @@ class LHUNet(BaseBlock):
         dec_cnn_kernel_sizes=None,
         dec_cnn_features=None,
         dec_cnn_dropouts=None,
-        dec_hyb_cnn_blocks=None, 
+        dec_hyb_cnn_blocks=None,
         dec_hyb_vit_blocks=None,
         dec_hyb_vit_sandwich=None,
     ):
@@ -152,10 +149,10 @@ class LHUNet(BaseBlock):
             dec_hyb_tf_dropouts = hyb_tf_dropouts[::-1]
         if not dec_cnn_kernel_sizes:
             dec_cnn_kernel_sizes = cnn_kernel_sizes[::-1]
-        
+
         if not dec_cnn_dropouts:
             dec_cnn_dropouts = cnn_dropouts[::-1]
-            
+
         if not dec_cnn_blocks:
             dec_cnn_blocks = cnn_blocks[::-1]
         if not dec_hyb_cnn_blocks:
@@ -171,7 +168,7 @@ class LHUNet(BaseBlock):
             enc_spatial_shaps.append(
                 [int(np.ceil(ss / st)) for ss, st in zip(enc_spatial_shaps[-1], stride)]
             )
-        
+
         # dec_spatial_shaps = [enc_spatial_shaps[-1]]
         # for stride in hyb_strides[::-1] + cnn_strides[::-1]:
         #     dec_spatial_shaps.append(
@@ -185,7 +182,7 @@ class LHUNet(BaseBlock):
 
         # x: torch.Size([1, 256, 5, 8, 8]), skip: torch.Size([1, 64, 20, 32, 32]), out: torch.Size([1, 128, 10, 16, 16]), conv:{'tcv_in_channels': 256, 'tcv_out_channels': 128, 'conv_in_channels': 256, 'conv_out_channels': 128, 'vit_input_size': 320, 'vit_hidden_size': 128, 'vit_proj_size': 64, 'vit_num_heads': 8}
         # x: torch.Size([1, 256, 5, 8, 8]), skip: torch.Size([1, 64, 20, 32, 32]), out: torch.Size([1, 128, 10, 16, 16]), conv:{'tcv_in_channels': 256, 'tcv_out_channels': 128, 'conv_in_channels': 256, 'conv_out_channels': 128, 'vit_input_size': 2560, 'vit_hidden_size': 128, 'vit_proj_size': 64, 'vit_num_heads': 8}
-        
+
         enc_cnn_spatial_shaps = enc_spatial_shaps[: len(cnn_kernel_sizes)]
         enc_hyb_spatial_shaps = enc_spatial_shaps[
             len(cnn_kernel_sizes) + 1 :
@@ -202,7 +199,6 @@ class LHUNet(BaseBlock):
         dec_hyb_tf_input_sizes = [
             np.prod(ss, dtype=int) for ss in dec_hyb_spatial_shaps
         ]
-        
 
         # ------------------------------------- Initialization --------------------------------
         self.init = nn.Sequential(
@@ -210,7 +206,7 @@ class LHUNet(BaseBlock):
             nn.PReLU(),
             nn.BatchNorm3d(init_features),
         )
-        
+
         # ------------------------------------- Encoder --------------------------------
         self.cnn_encoder = CNNEncoder(
             in_channels=init_features,
@@ -221,7 +217,7 @@ class LHUNet(BaseBlock):
             dropouts=cnn_dropouts,
             blocks=cnn_blocks,
             spatial_dims=spatial_dims,
-            norm_name='batch', #("group", {"num_groups": in_channels}),
+            norm_name="batch",  # ("group", {"num_groups": in_channels}),
             act_name=("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
         )
 
@@ -237,12 +233,11 @@ class LHUNet(BaseBlock):
             vit_repeats=hyb_tf_repeats,
             vit_num_heads=hyb_tf_num_heads,
             vit_dropouts=hyb_tf_dropouts,
-            
             spatial_dims=spatial_dims,
             cnn_blocks=hyb_cnn_blocks,
             vit_blocks=hyb_vit_blocks,
             vit_sandwich=hyb_vit_sandwich,
-            norm_name='batch', #("group", {"num_groups": in_channels}),
+            norm_name="batch",  # ("group", {"num_groups": in_channels}),
             act_name=("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
         )
 
@@ -251,26 +246,22 @@ class LHUNet(BaseBlock):
             in_channels=enc_hyb_out_channels,
             features=dec_hyb_features,
             skip_channels=dec_hyb_skip_channels,
-            
             tcv_kernel_sizes=dec_hyb_tcv_kernel_sizes,
             tcv_strides=hyb_strides[::-1],
             tcv_bias=dec_hyb_tcv_bias,
-
             cnn_kernel_sizes=dec_hyb_kernel_sizes,
             cnn_dropouts=dec_hyb_cnn_dropouts,
-            
             vit_input_sizes=dec_hyb_tf_input_sizes,
             vit_proj_sizes=dec_hyb_tf_proj_sizes,
             vit_repeats=dec_hyb_tf_repeats,
             vit_num_heads=dec_hyb_tf_num_heads,
             vit_dropouts=dec_hyb_tf_dropouts,
-            
             # return_outs=self.use_ds,
             spatial_dims=spatial_dims,
             cnn_blocks=dec_hyb_cnn_blocks,
             vit_blocks=dec_hyb_vit_blocks,
             vit_sandwich=dec_hyb_vit_sandwich,
-            norm_name='batch', #("group", {"num_groups": in_channels}),
+            norm_name="batch",  # ("group", {"num_groups": in_channels}),
             act_name=("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
         )
 
@@ -278,19 +269,16 @@ class LHUNet(BaseBlock):
             in_channels=dec_hyb_features[-1],
             skip_channels=dec_cnn_skip_channels,
             features=dec_cnn_features,
-            
             kernel_sizes=dec_cnn_kernel_sizes,
             dropouts=dec_cnn_dropouts,
-            
             tcv_kernel_sizes=dec_cnn_tcv_kernel_sizes,
             tcv_strides=cnn_strides[::-1],
             tcv_bias=dec_tcv_bias,
-            
             # return_outs=self.use_ds,
             spatial_dims=spatial_dims,
             blocks=dec_cnn_blocks,
-            norm_name='batch', #("group", {"num_groups": in_channels}),
-            act_name=("leakyrelu", {"inplace": True, "negative_slope": 0.01}),                  
+            norm_name="batch",  # ("group", {"num_groups": in_channels}),
+            act_name=("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
         )
 
         # -------------------------------- OUT --------------------------------
@@ -300,29 +288,29 @@ class LHUNet(BaseBlock):
             out_channels=dec_cnn_features[-1],
             kernel_size=3,
             stride=1,
-            norm_name="batch"
+            norm_name="batch",
         )
         self.out = nn.Sequential(
             UnetResBlock(
                 spatial_dims=spatial_dims,
-                in_channels=dec_cnn_features[-1]*2,
+                in_channels=dec_cnn_features[-1] * 2,
                 out_channels=dec_cnn_features[-1],
                 kernel_size=3,
                 stride=1,
-                norm_name="batch"
+                norm_name="batch",
             ),
             UnetOutBlock(
                 spatial_dims=spatial_dims,
                 in_channels=dec_cnn_features[-1],
                 out_channels=out_channels,
                 dropout=0,
-            )
+            ),
         )
-        
+
         self.num_classes = out_channels
-        
+
         self.apply(self._init_weights)
-        
+
     def forward(self, x):
         in_x = x.clone()
         x = self.init(x)
@@ -333,9 +321,9 @@ class LHUNet(BaseBlock):
         x, hyb_skips = self.hyb_encoder(x)
         # print(f"after x, hyb_skips = self.hyb_encoder(x) | x:{x.shape}")
 
-        x = self.hyb_decoder(x, [cnn_skips[-1]]+hyb_skips[:-1])
+        x = self.hyb_decoder(x, [cnn_skips[-1]] + hyb_skips[:-1])
         # print(f"after x = self.hyb_decoder(x, hyb_skips) | x:{x.shape}")
-        x = self.cnn_decoder(x, [r]+cnn_skips[:-1])
+        x = self.cnn_decoder(x, [r] + cnn_skips[:-1])
         # print(f"after x = self.cnn_decoder(x, cnn_skips) | x:{x.shape}")
 
         # print(f"after decoder -> x:{x.shape}, r:{r.shape}")

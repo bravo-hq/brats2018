@@ -11,8 +11,7 @@ from monai.networks.blocks.convolutions import Convolution
 from monai.networks.layers.factories import Act, Norm
 
 
-
-__all__ = ['BaseBlock', 'get_conv_layer', 'get_padding', 'get_output_padding']
+__all__ = ["BaseBlock", "get_conv_layer", "get_padding", "get_output_padding"]
 
 
 class BaseBlock(nn.Module):
@@ -61,8 +60,8 @@ def get_conv_layer(
         padding=padding,
         output_padding=output_padding,
     )
-    
-    
+
+
 class LayerNorm(nn.Module):
     def __init__(self, normalized_shape, eps=1e-6, data_format="channels_last"):
         super().__init__()
@@ -76,7 +75,9 @@ class LayerNorm(nn.Module):
 
     def forward(self, x):
         if self.data_format == "channels_last":
-            return F.layer_norm(x, self.normalized_shape, self.weight, self.bias, self.eps)
+            return F.layer_norm(
+                x, self.normalized_shape, self.weight, self.bias, self.eps
+            )
         elif self.data_format == "channels_first":
             u = x.mean(1, keepdim=True)
             s = (x - u).pow(2).mean(1, keepdim=True)
@@ -85,23 +86,25 @@ class LayerNorm(nn.Module):
             return x
 
 
-
 def get_padding(
     kernel_size: Union[Sequence[int], int], stride: Union[Sequence[int], int]
 ) -> Union[Tuple[int, ...], int]:
-
     kernel_size_np = np.atleast_1d(kernel_size)
     stride_np = np.atleast_1d(stride)
     padding_np = (kernel_size_np - stride_np + 1) / 2
     if np.min(padding_np) < 0:
-        raise AssertionError("padding value should not be negative, please change the kernel size and/or stride.")
+        raise AssertionError(
+            "padding value should not be negative, please change the kernel size and/or stride."
+        )
     padding = tuple(int(p) for p in padding_np)
 
     return padding if len(padding) > 1 else padding[0]
 
 
 def get_output_padding(
-    kernel_size: Union[Sequence[int], int], stride: Union[Sequence[int], int], padding: Union[Sequence[int], int]
+    kernel_size: Union[Sequence[int], int],
+    stride: Union[Sequence[int], int],
+    padding: Union[Sequence[int], int],
 ) -> Union[Tuple[int, ...], int]:
     kernel_size_np = np.atleast_1d(kernel_size)
     stride_np = np.atleast_1d(stride)
@@ -109,9 +112,9 @@ def get_output_padding(
 
     out_padding_np = 2 * padding_np + stride_np - kernel_size_np
     if np.min(out_padding_np) < 0:
-        raise AssertionError("out_padding value should not be negative, please change the kernel size and/or stride.")
+        raise AssertionError(
+            "out_padding value should not be negative, please change the kernel size and/or stride."
+        )
     out_padding = tuple(int(p) for p in out_padding_np)
 
     return out_padding if len(out_padding) > 1 else out_padding[0]
-
-

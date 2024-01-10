@@ -49,7 +49,9 @@ def acdc_v2_loader(config, verbose: bool = True) -> dict:
     if verbose:
         print("ACDC 3D:")
         for mode in modes:
-            print(f"├──> Length of {mode}_dataset: {len(datasets[mode])} and {mode}_patients: {len(datasets[mode])//2}")
+            print(
+                f"├──> Length of {mode}_dataset: {len(datasets[mode])} and {mode}_patients: {len(datasets[mode])//2}"
+            )
 
     # Create data loaders
     for mode in modes:

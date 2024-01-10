@@ -217,7 +217,7 @@ class DLKAFormer_DecoderBlock(BaseBlock):
         for block in self.blocks:
             x = block(x)
 
-#         x = F.layer_norm(x, normalized_shape=x.shape[2:])
+        #         x = F.layer_norm(x, normalized_shape=x.shape[2:])
         # print(f"\t after x: {x.shape}\n")
 
         return x

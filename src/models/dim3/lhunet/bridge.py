@@ -31,8 +31,6 @@ from ..modules.dynunet_blocks import get_padding
 from functools import partial
 
 
-
-
 class BridgeModule(nn.Module):
     def __init__(
         self,
@@ -87,25 +85,28 @@ class BridgeModule(nn.Module):
         for f1 in feats:
             for f2 in feats:
                 self.projs[f"{f1}->{f2}"] = (
-                    nn.Sequential(nn.Conv3d(f1, f2, kernel_size=1, padding=0), nn.GELU())
-#                     if f1 != f2
-#                     else nn.Identity()
+                    nn.Sequential(
+                        nn.Conv3d(f1, f2, kernel_size=1, padding=0), nn.GELU()
+                    )
+                    #                     if f1 != f2
+                    #                     else nn.Identity()
                 )
-#             self.proj_norms[f"n{f1}"] = (
-#                 nn.BatchNorm3d(f1)
-#             )
+
+    #             self.proj_norms[f"n{f1}"] = (
+    #                 nn.BatchNorm3d(f1)
+    #             )
 
     def _aggregate(self, skips, out_shape):
         feat = out_shape[1]
         special_shape = out_shape[2:]
         agg = torch.zeros(out_shape).to(skips[0].device)
         for skip in skips:
-#             if (skip.shape == out_shape).all(): continue
+            #             if (skip.shape == out_shape).all(): continue
             ps = self.projs[f"{skip.shape[1]}->{feat}"](skip)
             ps = F.interpolate(ps, size=special_shape)
-#             ps = self.proj_norms[f"{skip.shape[1]}->{feat}"](ps)
+            #             ps = self.proj_norms[f"{skip.shape[1]}->{feat}"](ps)
             agg = agg + ps
-#         agg = self.proj_norms[f"n{feat}"](agg)
+        #         agg = self.proj_norms[f"n{feat}"](agg)
         return agg
 
     def forward(self, *skips):
@@ -116,8 +117,8 @@ class BridgeModule(nn.Module):
             skips[::-1],
             self.c_atts,
             self.s_atts,
-            self.m_atts,  
-            self.norms#, self.norms_atts, self.norms_x
+            self.m_atts,
+            self.norms,  # , self.norms_atts, self.norms_x
         ):
             _x = x.clone()
             if i > 0:
@@ -132,10 +133,10 @@ class BridgeModule(nn.Module):
             else:
                 att = c_att + s_att + m_att
 
-#             att = F.layer_norm(att, normalized_shape=att.shape[2:])
-#             x = F.layer_norm(x, normalized_shape=x.shape[2:])
+            #             att = F.layer_norm(att, normalized_shape=att.shape[2:])
+            #             x = F.layer_norm(x, normalized_shape=x.shape[2:])
 
-            x = norm(att+x)
+            x = norm(att + x)
             outs.append(x)
 
             last_x = x.clone()

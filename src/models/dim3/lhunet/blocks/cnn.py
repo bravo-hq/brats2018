@@ -10,19 +10,22 @@ from .base import BaseBlock, get_conv_layer, get_padding
 from ..modules.deform_conv import DeformConvPack
 
 
-__all__ = ['CNNEncoder', 'CNNDecoder', 'get_cnn_block']
-
+__all__ = ["CNNEncoder", "CNNDecoder", "get_cnn_block"]
 
 
 class DCNNBlock(BaseBlock):
-    def __init__(self,
+    def __init__(
+        self,
         spatial_dims: int,
         in_channels: int,
         out_channels: int,
         kernel_size: Union[Sequence[int], int],
         stride: Union[Sequence[int], int],
         norm_name: Union[Tuple, str],
-        act_name: Union[Tuple, str] = ("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
+        act_name: Union[Tuple, str] = (
+            "leakyrelu",
+            {"inplace": True, "negative_slope": 0.01},
+        ),
         dropout: float | None = None,
     ):
         super().__init__()
@@ -35,13 +38,15 @@ class DCNNBlock(BaseBlock):
         )
         # nn.BatchNorm3d(out_channels),
         # nn.PReLU(),
-        self.norm = get_norm_layer(name=norm_name, spatial_dims=spatial_dims, channels=out_channels)
+        self.norm = get_norm_layer(
+            name=norm_name, spatial_dims=spatial_dims, channels=out_channels
+        )
         self.lrelu = get_act_layer(name=act_name)
         if dropout is not None:
             self.dropout = nn.Dropout(p=dropout, inplace=False)
-            
+
         self.apply(self._init_weights)
-    
+
     def forward(self, inp):
         out = self.dconv(inp)
         if hasattr(self, "dropout"):
@@ -49,7 +54,7 @@ class DCNNBlock(BaseBlock):
         out = self.norm(out)
         out = self.lrelu(out)
         return out
-    
+
 
 class UnetResBlock(BaseBlock):
     """
@@ -77,7 +82,10 @@ class UnetResBlock(BaseBlock):
         kernel_size: Union[Sequence[int], int],
         stride: Union[Sequence[int], int],
         norm_name: Union[Tuple, str],
-        act_name: Union[Tuple, str] = ("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
+        act_name: Union[Tuple, str] = (
+            "leakyrelu",
+            {"inplace": True, "negative_slope": 0.01},
+        ),
         dropout: Optional[Union[Tuple, str, float]] = None,
     ):
         super().__init__()
@@ -91,21 +99,39 @@ class UnetResBlock(BaseBlock):
             conv_only=True,
         )
         self.conv2 = get_conv_layer(
-            spatial_dims, out_channels, out_channels, kernel_size=kernel_size, stride=1, dropout=dropout, conv_only=True
+            spatial_dims,
+            out_channels,
+            out_channels,
+            kernel_size=kernel_size,
+            stride=1,
+            dropout=dropout,
+            conv_only=True,
         )
         self.lrelu = get_act_layer(name=act_name)
-        self.norm1 = get_norm_layer(name=norm_name, spatial_dims=spatial_dims, channels=out_channels)
-        self.norm2 = get_norm_layer(name=norm_name, spatial_dims=spatial_dims, channels=out_channels)
+        self.norm1 = get_norm_layer(
+            name=norm_name, spatial_dims=spatial_dims, channels=out_channels
+        )
+        self.norm2 = get_norm_layer(
+            name=norm_name, spatial_dims=spatial_dims, channels=out_channels
+        )
         self.downsample = in_channels != out_channels
         stride_np = np.atleast_1d(stride)
         if not np.all(stride_np == 1):
             self.downsample = True
         if self.downsample:
             self.conv3 = get_conv_layer(
-                spatial_dims, in_channels, out_channels, kernel_size=1, stride=stride, dropout=dropout, conv_only=True
+                spatial_dims,
+                in_channels,
+                out_channels,
+                kernel_size=1,
+                stride=stride,
+                dropout=dropout,
+                conv_only=True,
             )
-            self.norm3 = get_norm_layer(name=norm_name, spatial_dims=spatial_dims, channels=out_channels)
-            
+            self.norm3 = get_norm_layer(
+                name=norm_name, spatial_dims=spatial_dims, channels=out_channels
+            )
+
         self.apply(self._init_weights)
 
     def forward(self, inp):
@@ -150,7 +176,10 @@ class UnetBasicBlock(BaseBlock):
         kernel_size: Union[Sequence[int], int],
         stride: Union[Sequence[int], int],
         norm_name: Union[Tuple, str],
-        act_name: Union[Tuple, str] = ("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
+        act_name: Union[Tuple, str] = (
+            "leakyrelu",
+            {"inplace": True, "negative_slope": 0.01},
+        ),
         dropout: Optional[Union[Tuple, str, float]] = None,
     ):
         super().__init__()
@@ -164,12 +193,22 @@ class UnetBasicBlock(BaseBlock):
             conv_only=True,
         )
         self.conv2 = get_conv_layer(
-            spatial_dims, out_channels, out_channels, kernel_size=kernel_size, stride=1, dropout=dropout, conv_only=True
+            spatial_dims,
+            out_channels,
+            out_channels,
+            kernel_size=kernel_size,
+            stride=1,
+            dropout=dropout,
+            conv_only=True,
         )
         self.lrelu = get_act_layer(name=act_name)
-        self.norm1 = get_norm_layer(name=norm_name, spatial_dims=spatial_dims, channels=out_channels)
-        self.norm2 = get_norm_layer(name=norm_name, spatial_dims=spatial_dims, channels=out_channels)
-        
+        self.norm1 = get_norm_layer(
+            name=norm_name, spatial_dims=spatial_dims, channels=out_channels
+        )
+        self.norm2 = get_norm_layer(
+            name=norm_name, spatial_dims=spatial_dims, channels=out_channels
+        )
+
         self.apply(self._init_weights)
 
     def forward(self, inp):
@@ -210,7 +249,10 @@ class UnetUpBlock(BaseBlock):
         stride: Union[Sequence[int], int],
         upsample_kernel_size: Union[Sequence[int], int],
         norm_name: Union[Tuple, str],
-        act_name: Union[Tuple, str] = ("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
+        act_name: Union[Tuple, str] = (
+            "leakyrelu",
+            {"inplace": True, "negative_slope": 0.01},
+        ),
         dropout: Optional[Union[Tuple, str, float]] = None,
         trans_bias: bool = False,
     ):
@@ -237,7 +279,7 @@ class UnetUpBlock(BaseBlock):
             norm_name=norm_name,
             act_name=act_name,
         )
-        
+
         self.apply(self._init_weights)
 
     def forward(self, inp, skip):
@@ -250,47 +292,75 @@ class UnetUpBlock(BaseBlock):
 
 class UnetOutBlock(BaseBlock):
     def __init__(
-        self, spatial_dims: int, in_channels: int, out_channels: int, dropout: Optional[Union[Tuple, str, float]] = None
+        self,
+        spatial_dims: int,
+        in_channels: int,
+        out_channels: int,
+        dropout: Optional[Union[Tuple, str, float]] = None,
     ):
         super().__init__()
         self.conv = get_conv_layer(
-            spatial_dims, in_channels, out_channels, kernel_size=1, stride=1, dropout=dropout, bias=True, conv_only=True
+            spatial_dims,
+            in_channels,
+            out_channels,
+            kernel_size=1,
+            stride=1,
+            dropout=dropout,
+            bias=True,
+            conv_only=True,
         )
-        
+
         self.apply(self._init_weights)
 
     def forward(self, inp):
         return self.conv(inp)
 
+
 # =================================================
 
+
 def get_cnn_block(code):
-    if code.lower() == 'n': return UnetResBlock
-    elif code.lower() == 'd': return DCNNBlock
-    elif code.lower() == 'b': return UnetBasicBlock
-    else: raise NotImplementedError(f"Not implemented cnn-block for code:<{code}>")
+    if code.lower() == "n":
+        return UnetResBlock
+    elif code.lower() == "d":
+        return DCNNBlock
+    elif code.lower() == "b":
+        return UnetBasicBlock
+    else:
+        raise NotImplementedError(f"Not implemented cnn-block for code:<{code}>")
 
 
 class CNNEncoder(BaseBlock):
     def __init__(
-        self, in_channels, kernel_sizes, features, strides, maxpools, dropouts, 
-        norm_name='batch', #("group", {"num_groups": in_channels}),
+        self,
+        in_channels,
+        kernel_sizes,
+        features,
+        strides,
+        maxpools,
+        dropouts,
+        norm_name="batch",  # ("group", {"num_groups": in_channels}),
         act_name=("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
-        blocks:str='n', spatial_dims=3
+        blocks: str = "n",
+        spatial_dims=3,
     ) -> Any:
         super().__init__()
-        
+
         # >>> checking
-        if len(blocks)==1: blocks *= len(kernel_sizes)
+        if len(blocks) == 1:
+            blocks *= len(kernel_sizes)
         assert isinstance(kernel_sizes, list), "kernel_sizes must be a list"
         assert isinstance(features, list), "features must be a list"
         assert isinstance(strides, list), "strides must be a list"
-        assert (len(blocks) == len(kernel_sizes) == len(strides) == len(features)
+        assert (
+            len(blocks) == len(kernel_sizes) == len(strides) == len(features)
         ), "blocks, kernel_sizes, features, and strides must have the same length"
         if not isinstance(dropouts, list):
             dropouts = [dropouts for _ in features]
         in_out_channles = [in_channels] + features
-        in_out_channles = [(i,o) for i,o in zip(in_out_channles[:-1], in_out_channles[1:])]
+        in_out_channles = [
+            (i, o) for i, o in zip(in_out_channles[:-1], in_out_channles[1:])
+        ]
         # <<< checking
 
         self.encoder_blocks = nn.ModuleList()
@@ -324,27 +394,39 @@ class CNNEncoder(BaseBlock):
 
 
 class CNNDecoder(BaseBlock):
-    def __init__(self, 
-        in_channels, skip_channels, features, 
-        kernel_sizes, dropouts, 
-        tcv_kernel_sizes, tcv_strides, tcv_bias=False,
-        norm_name='batch', #("group", {"num_groups": in_channels}),
+    def __init__(
+        self,
+        in_channels,
+        skip_channels,
+        features,
+        kernel_sizes,
+        dropouts,
+        tcv_kernel_sizes,
+        tcv_strides,
+        tcv_bias=False,
+        norm_name="batch",  # ("group", {"num_groups": in_channels}),
         act_name=("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
-        blocks:str='n', spatial_dims=3
+        blocks: str = "n",
+        spatial_dims=3,
     ) -> Any:
         super().__init__()
-        if len(blocks)==1: blocks *= len(kernel_sizes)
+        if len(blocks) == 1:
+            blocks *= len(kernel_sizes)
         assert isinstance(kernel_sizes, list), "kernel_sizes must be a list"
         assert isinstance(features, list), "features must be a list"
-        assert (len(blocks) == len(kernel_sizes) == len(features)
+        assert (
+            len(blocks) == len(kernel_sizes) == len(features)
         ), "blocks, kernel_sizes, and features must have the same length"
         if not isinstance(dropouts, list):
             dropouts = [dropouts for _ in features]
-        assert (len(kernel_sizes) == len(tcv_strides) == len(features)
+        assert (
+            len(kernel_sizes) == len(tcv_strides) == len(features)
         ), "kernel_sizes, features, and tcv_strides must have the same length"
 
         in_out_channles = [in_channels] + features
-        in_out_channles = [(i,o) for i,o in zip(in_out_channles[:-1], in_out_channles[1:])]
+        in_out_channles = [
+            (i, o) for i, o in zip(in_out_channles[:-1], in_out_channles[1:])
+        ]
 
         self.ups = nn.ModuleList()
         self.convs = nn.ModuleList()
@@ -355,7 +437,7 @@ class CNNDecoder(BaseBlock):
             kernel_sizes,
             dropouts,
             tcv_kernel_sizes,
-            tcv_strides
+            tcv_strides,
         )
         for blkc, (ich, och), skch, ks, dpo, tcvks, tcvst in info:
             transp_conv = get_conv_layer(
@@ -370,10 +452,10 @@ class CNNDecoder(BaseBlock):
                 is_transposed=True,
             )
             self.ups.append(transp_conv)
-            
+
             conv_block = get_cnn_block(code=blkc)(
                 spatial_dims=spatial_dims,
-                in_channels=och+skch,
+                in_channels=och + skch,
                 out_channels=och,
                 kernel_size=ks,
                 stride=1,
@@ -382,21 +464,21 @@ class CNNDecoder(BaseBlock):
                 act_name=act_name,
             )
             self.convs.append(conv_block)
-            
-        self.apply(self._init_weights)
 
+        self.apply(self._init_weights)
 
     def forward(self, x, skips: list, return_outs=False, skip_sum=False):
         outs = []
         for up, conv in zip(self.ups, self.convs):
             # print(f"x: {x.shape}, skip: {skips[-1].shape}")
             x = up(x)
-            
+
             if skip_sum:
                 x = x + skips.pop()
             else:
                 x = torch.cat((x, skips.pop()), dim=1)
-                
+
             x = conv(x)
-            if return_outs: outs.append(x.clone())
+            if return_outs:
+                outs.append(x.clone())
         return (x, outs) if return_outs else x
