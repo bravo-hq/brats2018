@@ -2134,7 +2134,7 @@ class TransformerBlock_Deform_LKA_Channel_sequential(nn.Module):
 class LKA3d_Deform_Channel_sequential(nn.Module):
     def __init__(self, dim):
         super().__init__()
-        if dim == 32 or dim == 64:
+        if dim in [32, 64]:
             kernel_dwd = 7
             dilation_dwd = 3
             padding_dwd = 9
@@ -2690,7 +2690,7 @@ class TransformerBlock_Deform_LKA_Spatial_V2(nn.Module):
 class LKA3d_Deform_Spatial(nn.Module):
     def __init__(self, dim):
         super().__init__()
-        if dim == 32 or dim == 64:
+        if dim in [32, 64]:
             kernel_dwd = 7
             dilation_dwd = 3
             padding_dwd = 9

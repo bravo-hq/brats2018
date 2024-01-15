@@ -3,9 +3,9 @@ import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
-from ..modules.LKAs import DLKAFormer_EncoderBlock, DLKAFormer_DecoderBlock
-from ..modules.dynunet_blocks import UnetResBlock, UnetOutBlock
-from ..modules.vit.transformers import (
+from .modules.LKAs import DLKAFormer_EncoderBlock, DLKAFormer_DecoderBlock
+from .modules.dynunet_blocks import UnetResBlock, UnetOutBlock
+from .modules.vit.transformers import (
     TransformerBlock,
     TransformerBlock_3D_LKA,
     TransformerBlock_LKA_Channel,
@@ -24,10 +24,10 @@ from ..modules.vit.transformers import (
 
 from timm.models.layers import trunc_normal_
 from monai.networks.layers.utils import get_norm_layer
-from ..modules.layers import LayerNorm
-from ..modules.dynunet_blocks import get_conv_layer, UnetResBlock
-from ..modules.deform_conv import DeformConvPack
-from ..modules.dynunet_blocks import get_padding
+from .modules.layers import LayerNorm
+from .modules.dynunet_blocks import get_conv_layer, UnetResBlock
+from .modules.deform_conv import DeformConvPack
+from .modules.dynunet_blocks import get_padding
 from functools import partial
 
 

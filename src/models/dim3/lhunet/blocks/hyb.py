@@ -45,7 +45,24 @@ def get_vit_block(code):
         raise NotImplementedError(f"Not implemented cnn-block for code:<{code}>")
 
 
-class HybridEncoder(BaseBlock):
+class BaseHybridBlock:
+    def combine(self, tensors: list[torch.Tensor]):
+        if self.res_mode == "sum":
+            # return torch.sum(torch.stack(tensors))
+            res = torch.zeros_like(tensors[0])
+            for t in tensors:
+                res = res + t
+            return res
+        # elif self.res_mode=="cat":
+        #     res = torch.concatenate(tensors, dim=1)
+        #     return res
+        else:
+            raise NotImplementedError(
+                f"Not implemented combining mode for <{self.res}>"
+            )
+
+
+class HybridEncoder(BaseBlock, BaseHybridBlock):
     def __init__(
         self,
         in_channels: int,
@@ -62,7 +79,8 @@ class HybridEncoder(BaseBlock):
         spatial_dims=3,
         cnn_blocks="b",
         vit_blocks="c",
-        vit_sandwich=True,
+        arch_mode="sequential",  # sequential, residual, parallel, collective
+        res_mode="sum",  # "sum" or "cat"
         norm_name="batch",  # ("group", {"num_groups": in_channels}),
         act_name=("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
         *args: Any,
@@ -78,9 +96,15 @@ class HybridEncoder(BaseBlock):
         io_channles = [in_channels] + features
         io_channles = [(i, o) for i, o in zip(io_channles[:-1], io_channles[1:])]
         # <<< checking
-        self
 
-        self.encoder_blocks = nn.ModuleList()
+        self.arch_mode = arch_mode.lower()
+        self.res_mode = res_mode.lower()
+
+        self.downs, self.vits, self.convs = (
+            nn.ModuleList(),
+            nn.ModuleList(),
+            nn.ModuleList(),
+        )
         infos = zip(
             cnn_blocks,
             vit_blocks,
@@ -109,73 +133,78 @@ class HybridEncoder(BaseBlock):
             t_nh,
             t_do,
         ) in infos:
-            conv_block = get_cnn_block(code=c_blkc)(
-                spatial_dims=spatial_dims,
-                in_channels=ich,
-                out_channels=och,
-                kernel_size=c_ks,
-                stride=1 if c_mp else c_st,
-                norm_name=norm_name,
-                act_name=act_name,
-                dropout=c_do,
-            )
-            # vit_block = get_vit_block(code=t_blkc)(
-            #     input_size=och,
-            #     hidden_size=och*2,
-            #     proj_size=t_ps,
-            #     num_heads=t_nh,
-            #     dropout_rate=t_do,
-            #     pos_embed=True,
-            # )
-
-            vits = [
-                get_vit_block(code=t_blkc)(
-                    input_size=t_is,
-                    hidden_size=och,
-                    proj_size=t_ps,
-                    num_heads=t_nh,
-                    dropout_rate=t_do,
-                    pos_embed=True,
-                )
-                for _ in range(t_rp)
-            ]
-
-            if vit_sandwich:
-                vit_block = nn.Sequential(
-                    *vits,
+            self.downs.append(
+                nn.Sequential(
                     get_cnn_block(code=c_blkc)(
                         spatial_dims=spatial_dims,
-                        in_channels=och,
+                        in_channels=ich,
                         out_channels=och,
                         kernel_size=c_ks,
-                        stride=1,
+                        stride=1 if c_mp else c_st,
                         norm_name=norm_name,
                         act_name=act_name,
                         dropout=c_do,
                     ),
+                    nn.MaxPool3d(kernel_size=3, stride=2, padding=1)
+                    if c_mp
+                    else nn.Identity(),
                 )
-            else:
-                vit_block = nn.Sequential(*vits)
+            )
 
-            if c_mp:
-                maxpool = nn.MaxPool3d(kernel_size=3, stride=2, padding=1)
-                self.encoder_blocks.append(
-                    nn.Sequential(conv_block, maxpool, vit_block)
+            self.vits.append(
+                nn.Sequential(
+                    *[
+                        get_vit_block(code=t_blkc)(
+                            input_size=t_is,
+                            hidden_size=och,
+                            proj_size=t_ps,
+                            num_heads=t_nh,
+                            dropout_rate=t_do,
+                            pos_embed=True,
+                        )
+                        for _ in range(t_rp)
+                    ]
                 )
-            else:
-                self.encoder_blocks.append(nn.Sequential(conv_block, vit_block))
+            )
+
+            self.convs.append(
+                get_cnn_block(code=c_blkc)(
+                    spatial_dims=spatial_dims,
+                    in_channels=och,
+                    out_channels=och,
+                    kernel_size=3,
+                    stride=1,
+                    norm_name=norm_name,
+                    act_name=act_name,
+                    dropout=c_do,
+                )
+            )
 
         self.apply(self._init_weights)
 
     def forward(self, x):
         layer_features = []
-        for block in self.encoder_blocks:
-            x = block(x)
+        for down, vit, conv in zip(self.downs, self.vits, self.convs):
+            x = down(x)
+            if self.arch_mode == "sequential":
+                x = conv(vit(x))
+            elif self.arch_mode == "residual":
+                x = self.combine([x, vit(x)])
+                x = conv(x)
+            elif self.arch_mode == "parallel":
+                x = self.combine([x, vit(x), conv(x)])
+            elif self.arch_mode == "collective":
+                x_v = vit(x)
+                x = conv(self.combine([x, x_v]))
+                x = self.combine([x, x_v])
+            else:
+                raise NotImplementedError("Not implementer Arch. for Hybrid Encoder!")
+
             layer_features.append(x.clone())
         return x, layer_features
 
 
-class HybridDecoder(BaseBlock):
+class HybridDecoder(BaseBlock, BaseHybridBlock):
     def __init__(
         self,
         in_channels,
@@ -194,7 +223,9 @@ class HybridDecoder(BaseBlock):
         spatial_dims=3,
         cnn_blocks="b",
         vit_blocks="c",
-        vit_sandwich=True,
+        skip_mode="sum",
+        arch_mode="sequential",  # sequential, residual, parallel, collective
+        res_mode="sum",  # "sum" or "cat"
         norm_name="batch",  # ("group", {"num_groups": in_channels}),
         act_name=("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
         *args: Any,
@@ -220,17 +251,17 @@ class HybridDecoder(BaseBlock):
             len(cnn_kernel_sizes) == len(tcv_strides) == len(features)
         ), "kernel_sizes, features, and tcv_strides must have the same length"
         # <<< checking
-        self._data = []
+
+        self.skip_mode = skip_mode.lower()
+        self.arch_mode = arch_mode.lower()
+        self.res_mode = res_mode.lower()
 
         io_channles = [in_channels] + features
         io_channles = [(i, o) for i, o in zip(io_channles[:-1], io_channles[1:])]
 
-        self.ups, self.convs, self.vits, self.convs_e = (
-            nn.ModuleList(),
-            nn.ModuleList(),
-            nn.ModuleList(),
-            nn.ModuleList(),
-        )
+        self.ups, self.convs, self.vits, self.convs_o = [
+            nn.ModuleList() for _ in range(4)
+        ]
         info = zip(
             cnn_blocks,
             vit_blocks,
@@ -262,77 +293,94 @@ class HybridDecoder(BaseBlock):
             t_nh,
             t_do,
         ) in info:
-            transp_conv = get_conv_layer(
-                spatial_dims=spatial_dims,
-                in_channels=ich,
-                out_channels=och,
-                kernel_size=tcv_ks,
-                stride=tcv_st,
-                dropout=0,
-                bias=tcv_bias,
-                conv_only=True,
-                is_transposed=True,
-            )
-            self.ups.append(transp_conv)
-
-            conv_block = get_cnn_block(code=c_blkc)(
-                spatial_dims=spatial_dims,
-                in_channels=och + skch,
-                out_channels=och,
-                kernel_size=c_ks,
-                stride=1,
-                dropout=c_do,
-                norm_name=norm_name,
-                act_name=act_name,
-            )
-            self.convs.append(conv_block)
-
-            vits = [
-                get_vit_block(code=t_blkc)(
-                    input_size=t_is,
-                    hidden_size=och,
-                    proj_size=t_ps,
-                    num_heads=t_nh,
-                    dropout_rate=t_do,
-                    pos_embed=True,
+            self.ups.append(
+                get_conv_layer(
+                    spatial_dims=spatial_dims,
+                    in_channels=ich,
+                    out_channels=och,
+                    kernel_size=tcv_ks,
+                    stride=tcv_st,
+                    dropout=0,
+                    bias=tcv_bias,
+                    conv_only=True,
+                    is_transposed=True,
                 )
-                for _ in range(t_rp)
-            ]
+            )
 
-            if vit_sandwich:
-                self.vits.append(
-                    nn.Sequential(
-                        *vits,
-                        get_cnn_block(code=c_blkc)(
-                            spatial_dims=spatial_dims,
-                            in_channels=och,
-                            out_channels=och,
-                            kernel_size=c_ks,
-                            stride=1,
-                            dropout=c_do,
-                            norm_name=norm_name,
-                            act_name=act_name,
-                        ),
-                    )
+            vit_chs = och + skch if self.skip_mode == "cat" else och
+            self.vits.append(
+                nn.Sequential(
+                    *[
+                        get_vit_block(code=t_blkc)(
+                            input_size=t_is,
+                            hidden_size=och
+                            if self.arch_mode in ["sequential-lite", "collective"]
+                            else vit_chs,
+                            proj_size=t_ps,
+                            num_heads=t_nh,
+                            dropout_rate=t_do,
+                            pos_embed=True,
+                        )
+                        for _ in range(t_rp)
+                    ]
                 )
-            else:
-                self.vits.append(nn.Sequential(*vits))
+            )
+
+            self.convs.append(
+                get_cnn_block(code=c_blkc)(
+                    spatial_dims=spatial_dims,
+                    in_channels=och + skch if self.skip_mode == "cat" else och,
+                    out_channels=och + skch if self.skip_mode == "cat" else och,
+                    kernel_size=c_ks,
+                    stride=1,
+                    dropout=c_do,
+                    norm_name=norm_name,
+                    act_name=act_name,
+                )
+                if self.arch_mode == "parallel"
+                else nn.Identity()
+            )
+
+            self.convs_o.append(
+                get_cnn_block(code=c_blkc)(
+                    spatial_dims=spatial_dims,
+                    in_channels=och + skch if self.skip_mode == "cat" else och,
+                    out_channels=och,
+                    kernel_size=3,
+                    stride=1,
+                    dropout=c_do,
+                    norm_name=norm_name,
+                    act_name=act_name,
+                )
+            )
 
         self.apply(self._init_weights)
 
-    def forward(self, x, skips: list, return_outs=False, skip_sum=False):
+    def forward(self, x, skips: list, return_outs=False):
         outs = []
-        for up, conv, vit in zip(self.ups, self.convs, self.vits):
-            # print(f"\nx: {x.shape}, skip: {skips[-1].shape}\n")
+        for up, conv, vit, conv_o in zip(self.ups, self.convs, self.vits, self.convs_o):
             x = up(x)
-
-            if skip_sum:
+            if self.skip_mode == "sum":
                 x = x + skips.pop()
             else:
                 x = torch.cat((x, skips.pop()), dim=1)
 
-            x = conv(x)
-            x = vit(x)
+            if self.arch_mode == "sequential":
+                x = conv_o(vit(x))
+            elif self.arch_mode == "residual":
+                x = self.combine([x, vit(x)])
+                x = conv_o(x)
+            elif self.arch_mode == "parallel":
+                x = self.combine([x, vit(x), conv(x)])
+                x = conv_o(x)
+            elif self.arch_mode == "sequential-lite":
+                x = vit(conv_o(x))
+            elif self.arch_mode == "collective":
+                x = conv_o(x)
+                x = self.combine([x, vit(x)])
+            else:
+                raise NotImplementedError("Not implementer Arch. for Hybrid Decoder!")
+
             if return_outs:
                 outs.append(x.clone())
         return (x, outs) if return_outs else x

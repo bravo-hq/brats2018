@@ -92,7 +92,7 @@ def get_main_model(config):
 
 
 def get_lhunet_model(config):
-    from models.dim3.lhunet.models.v4 import LHUNet as model
+    from models.dim3.lhunet.models.v7 import LHUNet as model
 
     return model(**config["model"]["params"])
 

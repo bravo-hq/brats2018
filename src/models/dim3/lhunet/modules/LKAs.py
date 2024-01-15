@@ -76,8 +76,8 @@ class DLKAFormer_EncoderBlock(BaseBlock):
                     stride=stride,
                     padding=get_padding(kernel_size, stride),
                 ),
-                nn.PReLU(),
                 nn.BatchNorm3d(out_channels),
+                nn.PReLU(),
             )
         else:
             self.conv = get_conv_layer(
@@ -206,7 +206,7 @@ class DLKAFormer_DecoderBlock(BaseBlock):
             )
             self.blocks.append(self.tcv)
             self.blocks.append(nn.PReLU())
-            self.blocks.append(nn.BatchNorm3d(out_channels))
+            # self.blocks.append(nn.BatchNorm3d(out_channels))
 
         self.apply(self._init_weights)
 
@@ -217,7 +217,7 @@ class DLKAFormer_DecoderBlock(BaseBlock):
         for block in self.blocks:
             x = block(x)
 
-        #         x = F.layer_norm(x, normalized_shape=x.shape[2:])
+        x = F.layer_norm(x, normalized_shape=x.shape[2:])
         # print(f"\t after x: {x.shape}\n")
 
         return x
