@@ -133,5 +133,5 @@ model:
 
 use_sliding_window: true
 sliding_window_params:
-  overlap: 0.75
+  overlap: 0.2
   mode: 'gaussian'
