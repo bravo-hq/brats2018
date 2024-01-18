@@ -66,7 +66,7 @@ def configure_trainer(config, logger):
         monitor="val_loss",
         dirpath=logger.log_dir,
         filename=f"{config['model']['name']}-{{epoch:02d}}-{{val_loss:.4f}}",
-        save_top_k=1,
+        save_top_k=3,
         mode="min",
         save_last=True,
     )
