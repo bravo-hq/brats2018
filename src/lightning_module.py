@@ -11,6 +11,8 @@ from monai.inferers import SlidingWindowInferer
 from optimizers import *
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from typing import Union, Tuple, Dict
+from fvcore.nn import FlopCountAnalysis
+from ptflops import get_model_complexity_info
 
 
 class SemanticSegmentation3D(pl.LightningModule):
@@ -51,6 +53,34 @@ class SemanticSegmentation3D(pl.LightningModule):
                     .clone(prefix=f"{metric_name}/")
                     .to(self.device)
                 )
+
+        # calculate the params and FLOPs
+        n_parameters = sum(
+            p.numel() for p in self.model.parameters() if p.requires_grad
+        )
+        print(f"Total trainable parameters: {round(n_parameters * 1e-6, 2)} M")
+        # self.log("n_parameters_M", round(n_parameters * 1e-6, 2))
+        size = config["dataset"]["input_size"]
+        input_res = (1 if self.datatype == "acdc" else 4, size[2], size[0], size[1])
+        input = torch.ones(()).new_empty(
+            (1, *input_res),
+            dtype=next(self.model.parameters()).dtype,
+            device=next(self.model.parameters()).device,
+        )
+
+        flops = FlopCountAnalysis(self.model, input)
+        total_flops = flops.total()
+        print(f"MAdds: {round(total_flops * 1e-9, 2)} G")
+        # self.log("GFLOPS", round(total_flops * 1e-9, 2))
+
+        # ##### calculate the params and FLOPs (ptflops)
+        flops, params = get_model_complexity_info(
+            self.model, input_res, as_strings=True, print_per_layer_stat=False
+        )
+        print("{:<30}  {:<8}".format("Computational complexity: ", flops))
+        print("{:<30}  {:<8}".format("Number of parameters: ", params))
+        # self.log("n_parameters_M", params)
+        # self.log("GFLOPS", flops)
 
         self.lr = self.config["training"]["optimizer"]["params"]["lr"]
         self.log_pictures = config["checkpoints"]["log_pictures"]

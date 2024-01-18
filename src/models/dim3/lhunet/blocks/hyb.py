@@ -194,7 +194,7 @@ class HybridEncoder(BaseBlock, BaseHybridBlock):
             elif self.arch_mode == "parallel":
                 x = self.combine([x, vit(x), conv(x)])
             elif self.arch_mode == "parallel-v2":
-#                 x = self.combine([x, vit(x), conv(x)])
+                #                 x = self.combine([x, vit(x), conv(x)])
                 x = self.combine([vit(x), conv(x)])
             elif self.arch_mode == "collective":
                 x_v = vit(x)
@@ -381,7 +381,7 @@ class HybridDecoder(BaseBlock, BaseHybridBlock):
                 x = self.combine([x, vit(x), conv(x)])
                 x = conv_o(x)
             elif self.arch_mode == "parallel-v2":
-#                 x = self.combine([x, vit(x), conv(x)])
+                #                 x = self.combine([x, vit(x), conv(x)])
                 x = self.combine([vit(x), conv(x)])
                 x = conv_o(x)
             elif self.arch_mode == "sequential-lite":
