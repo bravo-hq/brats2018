@@ -30,6 +30,20 @@ from .cnn import get_cnn_block
 __all__ = ["HybridEncoder", "HybridDecoder"]
 
 
+class TransformerBlock_Deform_LKA_SC_sequential(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        self.dlka_s = TransformerBlock_Deform_LKA_Spatial_sequential(*args, **kwargs)
+        self.dlka_c = TransformerBlock_Deform_LKA_Channel_sequential(*args, **kwargs)
+
+    def forward(self, x):
+        s_a = self.dlka_s(x)
+        c_a = self.dlka_c(x)
+        sc_a = s_a + c_a
+        return sc_a
+        return F.layer_norm(sc_a, normalized_shape=sc_a.shape[2:])
+
+
 def get_vit_block(code):
     if code == "c":
         return TransformerBlock_Deform_LKA_Channel_V2
@@ -41,6 +55,8 @@ def get_vit_block(code):
         return TransformerBlock_Deform_LKA_Spatial_sequential
     elif code == "R":
         return TransformerBlock_3D_single_deform_LKA
+    elif code == "B":
+        return TransformerBlock_Deform_LKA_SC_sequential
     else:
         raise NotImplementedError(f"Not implemented cnn-block for code:<{code}>")
 
@@ -193,16 +209,9 @@ class HybridEncoder(BaseBlock, BaseHybridBlock):
                 x = conv(x)
             elif self.arch_mode == "parallel":
                 x = self.combine([x, vit(x), conv(x)])
-            elif self.arch_mode == "parallel-v2":
-                #                 x = self.combine([x, vit(x), conv(x)])
-                x = self.combine([vit(x), conv(x)])
             elif self.arch_mode == "collective":
                 x_v = vit(x)
                 x = conv(self.combine([x, x_v]))
-                x = self.combine([x, x_v])
-            elif self.arch_mode == "collective-v2":
-                x_v = vit(x)
-                x = conv(x_v)
                 x = self.combine([x, x_v])
             else:
                 raise NotImplementedError("Not implementer Arch. for Hybrid Encoder!")
@@ -379,10 +388,6 @@ class HybridDecoder(BaseBlock, BaseHybridBlock):
                 x = conv_o(x)
             elif self.arch_mode == "parallel":
                 x = self.combine([x, vit(x), conv(x)])
-                x = conv_o(x)
-            elif self.arch_mode == "parallel-v2":
-                #                 x = self.combine([x, vit(x), conv(x)])
-                x = self.combine([vit(x), conv(x)])
                 x = conv_o(x)
             elif self.arch_mode == "sequential-lite":
                 x = vit(conv_o(x))
