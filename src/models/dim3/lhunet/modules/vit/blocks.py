@@ -51,7 +51,11 @@ class TransformerBlock_LKA3D(nn.Module):
         self.gamma = nn.Parameter(1e-6 * torch.ones(hidden_size), requires_grad=True)
         self.epa = epa_block(input_size=input_size, hidden_size=hidden_size, proj_size=proj_size, num_heads=num_heads)   
         self.conv51 = UnetResBlock(3, hidden_size, hidden_size, kernel_size=3, stride=1, norm_name="batch")
-        self.conv8 = nn.Conv3d(hidden_size, hidden_size, 1)
+        
+        if dropout_rate:
+            self.conv8 = nn.Sequential(nn.Dropout3d(dropout_rate, False), nn.Conv3d(hidden_size, hidden_size, 1))
+        else:
+            self.conv8 = nn.Conv3d(hidden_size, hidden_size, 1)
 
         self.pos_embed = None
         if pos_embed:
@@ -112,7 +116,7 @@ class ChannelAttention_LKA3D(nn.Module):
         if use_temperature_ch:
             self.temperature_ch = nn.Parameter(torch.ones(num_heads, 1, 1))
         
-        if isinstance(lka_block, nn.Module):
+        if lka_block:
             self.use_lka = True
             self.lka = lka_block(d_model=hidden_size)
             if spatial_attn_drop:
@@ -133,7 +137,7 @@ class ChannelAttention_LKA3D(nn.Module):
         
 
     def spatial_attention(self, x, special_shape):
-        B, N, C = x.shape
+        B, C = x.shape[:2]
         x_SA = self.lka(x, B, C, *special_shape)
         if self.use_temperature_sp: 
             x_SA *= self.temperature_sp
