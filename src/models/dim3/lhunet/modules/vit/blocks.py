@@ -1,12 +1,12 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
+
 # import sys
 # sys.path.append("..")
 
 from ..dynunet_blocks import UnetResBlock
 from ..cnn import *
-
 
 
 class TransformerBlock_LKA3D(nn.Module):
@@ -15,15 +15,16 @@ class TransformerBlock_LKA3D(nn.Module):
     UNETR++: Delving into Efficient and Accurate 3D Medical Image Segmentation"
     With LKA and spatial attention
     """
+
     def __init__(
-            self,
-            epa_block: nn.Module,
-            input_size: int,
-            hidden_size: int,
-            proj_size: int,
-            num_heads: int,
-            dropout_rate: float = 0.0,
-            pos_embed=False,
+        self,
+        epa_block: nn.Module,
+        input_size: int,
+        hidden_size: int,
+        proj_size: int,
+        num_heads: int,
+        dropout_rate: float = 0.0,
+        pos_embed=False,
     ) -> None:
         """
         Args:
@@ -49,11 +50,21 @@ class TransformerBlock_LKA3D(nn.Module):
 
         self.norm = nn.LayerNorm(hidden_size)
         self.gamma = nn.Parameter(1e-6 * torch.ones(hidden_size), requires_grad=True)
-        self.epa = epa_block(input_size=input_size, hidden_size=hidden_size, proj_size=proj_size, num_heads=num_heads)   
-        self.conv51 = UnetResBlock(3, hidden_size, hidden_size, kernel_size=3, stride=1, norm_name="batch")
-        
+        self.epa = epa_block(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            proj_size=proj_size,
+            num_heads=num_heads,
+        )
+        self.conv51 = UnetResBlock(
+            3, hidden_size, hidden_size, kernel_size=3, stride=1, norm_name="batch"
+        )
+
         if dropout_rate:
-            self.conv8 = nn.Sequential(nn.Dropout3d(dropout_rate, False), nn.Conv3d(hidden_size, hidden_size, 1))
+            self.conv8 = nn.Sequential(
+                nn.Dropout3d(dropout_rate, False),
+                nn.Conv3d(hidden_size, hidden_size, 1),
+            )
         else:
             self.conv8 = nn.Conv3d(hidden_size, hidden_size, 1)
 
@@ -70,32 +81,39 @@ class TransformerBlock_LKA3D(nn.Module):
             x = x + self.pos_embed
         attn = x + self.gamma * self.epa(self.norm(x), B, C, H, W, D)
 
-        attn_skip = attn.reshape(B, H, W, D, C).permute(0, 4, 1, 2, 3)  # (B, C, H, W, D)
+        attn_skip = attn.reshape(B, H, W, D, C).permute(
+            0, 4, 1, 2, 3
+        )  # (B, C, H, W, D)
         attn = self.conv51(attn_skip)
         x = attn_skip + self.conv8(attn)
 
         return x
 
 
-
 class ChannelAttention_LKA3D(nn.Module):
     """
-        Channel attention parallel to 3d LKA
+    Channel attention parallel to 3d LKA
     """
-    def __init__(self, hidden_size, num_heads=4, qkv_bias=False, 
-                 use_norm_ch=False,
-                 use_norm_sp=False,
-                 use_temperature_ch=False,
-                 use_temperature_sp=False,
-                 temperature_sp_use_head_nums=False,
-                 lka_block=LKA3D_571_Block,
-                 sequential=False,
-                 channel_attn_drop=0, 
-                 spatial_attn_drop=0,
-                 *args, **kwargs
-                 ):
+
+    def __init__(
+        self,
+        hidden_size,
+        num_heads=4,
+        qkv_bias=False,
+        use_norm_ch=False,
+        use_norm_sp=False,
+        use_temperature_ch=False,
+        use_temperature_sp=False,
+        temperature_sp_use_head_nums=False,
+        lka_block=LKA3D_571_Block,
+        sequential=False,
+        channel_attn_drop=0,
+        spatial_attn_drop=0,
+        *args,
+        **kwargs
+    ):
         super().__init__()
-    
+
         self.num_heads = num_heads
         self.sequential = sequential
         self.use_norm_ch = use_norm_ch
@@ -104,18 +122,18 @@ class ChannelAttention_LKA3D(nn.Module):
         self.spatial_attn_drop = spatial_attn_drop
         self.use_temperature_ch = use_temperature_ch
         self.use_temperature_sp = use_temperature_sp
-        
+
         if channel_attn_drop:
             self.attn_drop_ch = nn.Dropout(channel_attn_drop)
 
         # qkvv are 3 linear layers (query_shared, key_shared, value_spatial, value_channel)
         self.qkv = nn.Linear(hidden_size, hidden_size * 3, bias=qkv_bias)
-        
+
         if use_norm_ch:
             self.norm_ch = nn.LayerNorm(hidden_size)
         if use_temperature_ch:
             self.temperature_ch = nn.Parameter(torch.ones(num_heads, 1, 1))
-        
+
         if lka_block:
             self.use_lka = True
             self.lka = lka_block(d_model=hidden_size)
@@ -129,26 +147,24 @@ class ChannelAttention_LKA3D(nn.Module):
             if sequential:
                 self.out = nn.Linear(hidden_size, hidden_size)
             else:
-                self.out_sp = nn.Linear(hidden_size, int(hidden_size//2))
-                self.out_ch = nn.Linear(hidden_size, int(hidden_size//2))
+                self.out_sp = nn.Linear(hidden_size, int(hidden_size // 2))
+                self.out_ch = nn.Linear(hidden_size, int(hidden_size // 2))
         else:
             self.use_lka = False
             self.out = nn.Linear(hidden_size, hidden_size)
-        
 
-    def spatial_attention(self, x, special_shape):
-        B, C = x.shape[:2]
-        x_SA = self.lka(x, B, C, *special_shape)
-        if self.use_temperature_sp: 
+    def spatial_attention(self, x, B, C, spatial_shapes):
+        x_SA = self.lka(x, B, C, *spatial_shapes)
+        if self.use_temperature_sp:
             x_SA *= self.temperature_sp
         if self.spatial_attn_drop:
             x_SA = self.attn_drop_sp(x_SA)
         return self.norm_sp(x_SA) if self.use_norm_sp else x_SA
-    
+
     def channel_attention(self, x):
         B, N, C = x.shape
 
-        qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C//self.num_heads)
+        qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads)
         qkv = qkv.permute(2, 0, 3, 1, 4)
         query, key, v_CA = qkv[0], qkv[1], qkv[2]
 
@@ -160,7 +176,7 @@ class ChannelAttention_LKA3D(nn.Module):
         key = torch.nn.functional.normalize(key, dim=-1)
 
         attn_CA = query @ key.transpose(-2, -1)
-        if self.use_temperature_ch: 
+        if self.use_temperature_ch:
             attn_CA *= self.temperature_ch
         attn_CA = attn_CA.softmax(dim=-1)
         if self.channel_attn_drop:
@@ -170,53 +186,58 @@ class ChannelAttention_LKA3D(nn.Module):
 
     def forward(self, x, B_in, C_in, H, W, D):
         B, N, C = x.shape
-        special_shape=(H, W, D)
-        
+        special_shape = (H, W, D)
+
         # Channel Attention (ViT)
         x_CA = self.channel_attention(x)
-        
+
         if not self.use_lka:
             return self.out(x_CA)
-        
-        if self.sequential: 
+
+        if self.sequential:
             x = x_CA.permute(0, 2, 1).reshape(B, C, *special_shape)
-        
+
         # Spatial Attention (LKA3D)
-        x_SA = self.spatial_attention(x, special_shape)
-        
+        x_SA = self.spatial_attention(x, B, C, special_shape)
+
         if self.sequential:
             x = self.out(x_SA)
         else:
             x_CA = self.out_ch(x_CA)
             x_SA = self.out_sp(x_SA)
-            x = torch.cat((x_SA, x_CA), dim=-1) 
-        
+            x = torch.cat((x_SA, x_CA), dim=-1)
+
         return x
 
     @torch.jit.ignore
     def no_weight_decay(self):
-        return {'temperature_ch', 'temperature_sp'}
-
+        return {"temperature_ch", "temperature_sp"}
 
 
 class SpatialAttention_LKA3D(nn.Module):
     """
-        Spatial attention parallel to 3d LKA
+    Spatial attention parallel to 3d LKA
     """
-    def __init__(self, 
-                 input_size, hidden_size, 
-                 num_heads=4, qkv_bias=False, proj_size=32,
-                 use_norm_spa=False,
-                 use_norm_lka=False,
-                 use_temperature_spa=False,
-                 use_temperature_lka=False,
-                 temperature_lka_use_head_nums=False,
-                 lka_block=LKA3D_571_Block,
-                 sequential=False,
-                 spa_attn_drop=0,
-                 lka_attn_drop=0,
-                 *args, **kwargs
-                 ):
+
+    def __init__(
+        self,
+        input_size,
+        hidden_size,
+        num_heads=4,
+        qkv_bias=False,
+        proj_size=32,
+        use_norm_spa=False,
+        use_norm_lka=False,
+        use_temperature_spa=False,
+        use_temperature_lka=False,
+        temperature_lka_use_head_nums=False,
+        lka_block=LKA3D_571_Block,
+        sequential=False,
+        spa_attn_drop=0,
+        lka_attn_drop=0,
+        *args,
+        **kwargs
+    ):
         super().__init__()
         self.num_heads = num_heads
         self.sequential = sequential
@@ -230,7 +251,7 @@ class SpatialAttention_LKA3D(nn.Module):
         # E and F are projection matrices with shared weights used in spatial attention module to project
         # keys and values from HWD-dimension to P-dimension
         self.E = self.F = nn.Linear(input_size, proj_size)
-        
+
         if lka_attn_drop:
             self.attn_drop_lka = nn.Dropout(lka_attn_drop)
         if spa_attn_drop:
@@ -239,35 +260,35 @@ class SpatialAttention_LKA3D(nn.Module):
         # qkvv are 3 linear layers (query_shared, key_shared, value_spatial, value_channlka)
         self.qkv = nn.Linear(hidden_size, hidden_size * 3, bias=qkv_bias)
         self.lka = lka_block(d_model=hidden_size)
-        
+
         if use_temperature_lka:
             tem_sp_num = num_heads if temperature_lka_use_head_nums else 1
             self.temperature_lka = nn.Parameter(torch.ones(tem_sp_num, 1, 1))
         if use_temperature_spa:
             self.temperature_spa = nn.Parameter(torch.ones(num_heads, 1, 1))
-        
+
         if use_norm_spa:
             self.norm_spa = nn.LayerNorm(hidden_size)
         if use_norm_lka:
             self.norm_lka = nn.LayerNorm(hidden_size)
-        
+
         if sequential:
             self.out = nn.Linear(hidden_size, hidden_size)
         else:
-            self.out_spa = nn.Linear(hidden_size, int(hidden_size//2))
-            self.out_lka = nn.Linear(hidden_size, int(hidden_size//2))
+            self.out_spa = nn.Linear(hidden_size, int(hidden_size // 2))
+            self.out_lka = nn.Linear(hidden_size, int(hidden_size // 2))
 
     def spatial_lka_attention(self, x, special_shape):
         if self.sequential:
             B, C, H, W, D = x.shape
         else:
             B, N, C = x.shape
-            
+
         x_LKA = self.lka(x, B, C, *special_shape)
-        if self.use_temperature_lka: 
+        if self.use_temperature_lka:
             x_LKA *= self.temperature_lka
         if self.lka_attn_drop:
-            x_LKA = self.attn_drop_lka(x_LKA)        
+            x_LKA = self.attn_drop_lka(x_LKA)
         return self.norm_lka(x_LKA) if self.use_norm_lka else x_LKA
 
     def spatial_vit_attention(self, x):
@@ -285,27 +306,33 @@ class SpatialAttention_LKA3D(nn.Module):
         v_SA_projected = self.F(v_SA)
 
         query = torch.nn.functional.normalize(query, dim=-1)
-        #key = torch.nn.functional.normalize(key, dim=-1)
+        # key = torch.nn.functional.normalize(key, dim=-1)
 
         attn_SA = query.permute(0, 1, 3, 2) @ k_projected
-        if self.use_temperature_spa: 
+        if self.use_temperature_spa:
             attn_SA *= self.temperature_spa
         attn_SA = attn_SA.softmax(dim=-1)
         if self.spa_attn_drop:
             attn_SA = self.attn_drop_spa(attn_SA)
-        x_SA = (attn_SA @ v_SA_projected.transpose(-2, -1)).permute(0, 3, 1, 2).reshape(B, N, C)
-        
+        x_SA = (
+            (attn_SA @ v_SA_projected.transpose(-2, -1))
+            .permute(0, 3, 1, 2)
+            .reshape(B, N, C)
+        )
+
         return self.norm_spa(x_SA) if self.use_norm_spa else x_SA
 
     def forward(self, x, B_in, C_in, H, W, D):
         B, N, C = x.shape
-        special_shape=(H, W, D)
-        
+        special_shape = (H, W, D)
+
         # Spatial Attention (ViT)
         x_SA = self.spatial_vit_attention(x)
-        
-        if self.sequential: 
-            x = x_SA.permute(0, 2, 1).reshape(B, C, *special_shape) # B N C --> B C N --> B C H W D
+
+        if self.sequential:
+            x = x_SA.permute(0, 2, 1).reshape(
+                B, C, *special_shape
+            )  # B N C --> B C N --> B C H W D
 
         # Spatial Attention (LKA3D)
         x_LKA = self.spatial_lka_attention(x, special_shape=(H, W, D))
@@ -315,23 +342,25 @@ class SpatialAttention_LKA3D(nn.Module):
         else:
             x_SA = self.out_spa(x_SA)
             x_LKA = self.out_lka(x_LKA)
-            x = torch.cat((x_SA, x_LKA), dim=-1) 
+            x = torch.cat((x_SA, x_LKA), dim=-1)
 
         return x
 
     @torch.jit.ignore
     def no_weight_decay(self):
-        return {'temperature_lka', 'temperature_spa'}
-
+        return {"temperature_lka", "temperature_spa"}
 
 
 # ================================================
 
 
-TransformerBlock_LKA3D_571 = partial(TransformerBlock_LKA3D, ep_block=LKA3D_571_Block)
-TransformerBlock_LKA3D_5731 = partial(TransformerBlock_LKA3D, ep_block=LKA3D_5731_Block)
-TransformerBlock_DLKA3D_single = partial(TransformerBlock_LKA3D, ep_block=DLKA3D_Static_Block)
-
+TransformerBlock_LKA3D_571 = partial(TransformerBlock_LKA3D, epa_block=LKA3D_571_Block)
+TransformerBlock_LKA3D_5731 = partial(
+    TransformerBlock_LKA3D, epa_block=LKA3D_5731_Block
+)
+TransformerBlock_DLKA3D_single = partial(
+    TransformerBlock_LKA3D, epa_block=DLKA3D_Static_Block
+)
 
 
 ####################(Sequential)#####################
@@ -346,7 +375,9 @@ SpatialAttention_DLKA3D_sequential = partial(
     sequential=True,
 )
 
-TransformerBlock_DLKA3D_SpatialSequential = partial(TransformerBlock_LKA3D, epa_block=SpatialAttention_DLKA3D_sequential)    
+TransformerBlock_DLKA3D_SpatialSequential = partial(
+    TransformerBlock_LKA3D, epa_block=SpatialAttention_DLKA3D_sequential
+)
 
 
 ChannelAttention_DLKA3D_sequential = partial(
@@ -360,7 +391,9 @@ ChannelAttention_DLKA3D_sequential = partial(
     sequential=True,
 )
 
-TransformerBlock_DLKA3D_ChannelSequential = partial(TransformerBlock_LKA3D, epa_block=ChannelAttention_DLKA3D_sequential)    
+TransformerBlock_DLKA3D_ChannelSequential = partial(
+    TransformerBlock_LKA3D, epa_block=ChannelAttention_DLKA3D_sequential
+)
 
 
 ChannelAttention_ONLY = partial(
@@ -370,11 +403,9 @@ ChannelAttention_ONLY = partial(
     lka_block=None,
 )
 
-TransformerBlock_3D_ChannelAtt_ONLY = partial(TransformerBlock_LKA3D, epa_block=ChannelAttention_ONLY)    
-
-
-
-
+TransformerBlock_3D_ChannelAtt_ONLY = partial(
+    TransformerBlock_LKA3D, epa_block=ChannelAttention_ONLY
+)
 
 
 ####################(Parallel)#####################
@@ -388,10 +419,12 @@ SpatialAttention_LKA3D_parallel = partial(
     lka_block=LKA3D_571_Block,
     sequential=False,
     spa_attn_drop=0,
-    lka_attn_drop=0, 
+    lka_attn_drop=0,
 )
 
-TransformerBlock_LKA3D_SpatialParallel = partial(TransformerBlock_LKA3D, ep_block=SpatialAttention_LKA3D_parallel)
+TransformerBlock_LKA3D_SpatialParallel = partial(
+    TransformerBlock_LKA3D, epa_block=SpatialAttention_LKA3D_parallel
+)
 
 
 SpatialAttention_DLKA3D_parallel = partial(
@@ -404,10 +437,12 @@ SpatialAttention_DLKA3D_parallel = partial(
     lka_block=DLKA3D_Block,
     sequential=False,
     spa_attn_drop=0,
-    lka_attn_drop=0, 
+    lka_attn_drop=0,
 )
 
-TransformerBlock_DLKA3D_SpatialParallel = partial(TransformerBlock_LKA3D, ep_block=SpatialAttention_DLKA3D_parallel)
+TransformerBlock_DLKA3D_SpatialParallel = partial(
+    TransformerBlock_LKA3D, epa_block=SpatialAttention_DLKA3D_parallel
+)
 
 
 ChannelAttention_LKA3D_normParallel = partial(
@@ -417,10 +452,12 @@ ChannelAttention_LKA3D_normParallel = partial(
     use_temperature_sp=True,
     use_norm_sp=True,
     use_norm_ch=True,
-    sequential=False
+    sequential=False,
 )
 
-TransformerBlock_LKA_ChannelNormParallel = partial(TransformerBlock_LKA3D, epa_block=ChannelAttention_LKA3D_normParallel)    
+TransformerBlock_LKA3D_ChannelNormParallel = partial(
+    TransformerBlock_LKA3D, epa_block=ChannelAttention_LKA3D_normParallel
+)
 
 
 ChannelAttention_DLKA3D_parallel = partial(
@@ -430,10 +467,12 @@ ChannelAttention_DLKA3D_parallel = partial(
     use_temperature_sp=False,
     use_norm_sp=False,
     use_norm_ch=False,
-    sequential=False
+    sequential=False,
 )
 
-TransformerBlock_DLKA3D_ChannelParallel = partial(TransformerBlock_LKA3D, ep_block=ChannelAttention_DLKA3D_parallel)
+TransformerBlock_DLKA3D_ChannelParallel = partial(
+    TransformerBlock_LKA3D, epa_block=ChannelAttention_DLKA3D_parallel
+)
 
 
 ChannelAttention_LKA3D_tempsphead_parallel = partial(
@@ -444,25 +483,31 @@ ChannelAttention_LKA3D_tempsphead_parallel = partial(
     temperature_sp_use_head_nums=True,
     use_norm_sp=False,
     use_norm_ch=False,
-    sequential=False
+    sequential=False,
 )
 
-TransformerBlock_LKA3D_ChannelParallel_tempsphead = partial(TransformerBlock_LKA3D, ep_block=ChannelAttention_LKA3D_tempsphead_parallel)
-
-
-
-
-
+TransformerBlock_LKA3D_ChannelParallel_tempsphead = partial(
+    TransformerBlock_LKA3D, epa_block=ChannelAttention_LKA3D_tempsphead_parallel
+)
 
 
 # -------------------------(Others)--------------------------
 class EPA(nn.Module):
     """
-        Efficient Paired Attention Block, based on: "Shaker et al.,
-        UNETR++: Delving into Efficient and Accurate 3D Medical Image Segmentation"
-        """
-    def __init__(self, input_size, hidden_size, proj_size, num_heads=4, qkv_bias=False,
-                 channel_attn_drop=0.1, spatial_attn_drop=0.1):
+    Efficient Paired Attention Block, based on: "Shaker et al.,
+    UNETR++: Delving into Efficient and Accurate 3D Medical Image Segmentation"
+    """
+
+    def __init__(
+        self,
+        input_size,
+        hidden_size,
+        proj_size,
+        num_heads=4,
+        qkv_bias=False,
+        channel_attn_drop=0.1,
+        spatial_attn_drop=0.1,
+    ):
         super().__init__()
         self.num_heads = num_heads
         self.temperature = nn.Parameter(torch.ones(num_heads, 1, 1))
@@ -504,10 +549,16 @@ class EPA(nn.Module):
         attn_CA = self.attn_drop(attn_CA)
         x_CA = (attn_CA @ v_CA).permute(0, 3, 1, 2).reshape(B, N, C)
 
-        attn_SA = (q_shared.permute(0, 1, 3, 2) @ k_shared_projected) * self.temperature2
+        attn_SA = (
+            q_shared.permute(0, 1, 3, 2) @ k_shared_projected
+        ) * self.temperature2
         attn_SA = attn_SA.softmax(dim=-1)
         attn_SA = self.attn_drop_2(attn_SA)
-        x_SA = (attn_SA @ v_SA_projected.transpose(-2, -1)).permute(0, 3, 1, 2).reshape(B, N, C)
+        x_SA = (
+            (attn_SA @ v_SA_projected.transpose(-2, -1))
+            .permute(0, 3, 1, 2)
+            .reshape(B, N, C)
+        )
 
         # Concat fusion
         x_SA = self.out_proj(x_SA)
@@ -518,9 +569,10 @@ class EPA(nn.Module):
 
     @torch.jit.ignore
     def no_weight_decay(self):
-        return {'temperature', 'temperature2'}
+        return {"temperature", "temperature2"}
 
-TransformerBlock_3D_EPA = partial(TransformerBlock_LKA3D, ep_block=EPA)
+
+TransformerBlock_3D_EPA = partial(TransformerBlock_LKA3D, epa_block=EPA)
 
 
 class EfficientAttention(nn.Module):
@@ -549,60 +601,67 @@ class EfficientAttention(nn.Module):
 
     def forward(self, input_):
         B, N, C = input_.shape
-        #print("Input shape {}".format(input_.shape))
+        # print("Input shape {}".format(input_.shape))
 
         queries = self.query_lin(input_).permute(0, 2, 1)
-        #print("queries shape {}".format(queries.shape))
+        # print("queries shape {}".format(queries.shape))
         keys = self.key_lin(input_).permute(0, 2, 1)
-        #print("keys shape {}".format(keys.shape))
+        # print("keys shape {}".format(keys.shape))
         values = self.value_lin(input_).permute(0, 2, 1)
-        #print("values shape {}".format(values.shape))
+        # print("values shape {}".format(values.shape))
 
         head_key_channels = self.hidden_size // self.head_count
         head_value_channels = self.hidden_size // self.head_count
 
         attended_values = []
         for i in range(self.head_count):
-            key = F.softmax(keys[:, i * head_key_channels : (i + 1) * head_key_channels, :], dim=2)
-            #print("Key shape: {}".format(key.shape))
+            key = F.softmax(
+                keys[:, i * head_key_channels : (i + 1) * head_key_channels, :], dim=2
+            )
+            # print("Key shape: {}".format(key.shape))
 
-            query = F.softmax(queries[:, i * head_key_channels : (i + 1) * head_key_channels, :], dim=1)
-            #print("Query shape: {}".format(query.shape))
-            #print("Query transposed shape: {}".format(query.transpose(1,2).shape))
+            query = F.softmax(
+                queries[:, i * head_key_channels : (i + 1) * head_key_channels, :],
+                dim=1,
+            )
+            # print("Query shape: {}".format(query.shape))
+            # print("Query transposed shape: {}".format(query.transpose(1,2).shape))
 
-            value = values[:, i * head_value_channels : (i + 1) * head_value_channels, :]
-            #print("Value shape: {}".format(value.shape))
-            #print("Value transposed shape: {}".format(value.transpose(1,2).shape))
+            value = values[
+                :, i * head_value_channels : (i + 1) * head_value_channels, :
+            ]
+            # print("Value shape: {}".format(value.shape))
+            # print("Value transposed shape: {}".format(value.transpose(1,2).shape))
 
             context = key @ value.transpose(1, 2)  # dk*dv
-            #print("Context shape: {}".format(context.shape))
-            #print("Context transposed shape: {}".format(context.transpose(1,2).shape))
-            attended_value = (context.transpose(1, 2) @ query) # n*dv
-            #print("Attended value shape: {}".format(attended_value.shape))
+            # print("Context shape: {}".format(context.shape))
+            # print("Context transposed shape: {}".format(context.transpose(1,2).shape))
+            attended_value = context.transpose(1, 2) @ query  # n*dv
+            # print("Attended value shape: {}".format(attended_value.shape))
             attended_values.append(attended_value)
 
         aggregated_values = torch.cat(attended_values, dim=1)
-        #print("Aggregated values shape before reprojection: {}".format(aggregated_values.shape))
-        attention = self.reprojection(aggregated_values.transpose(1,2))
-        #print("Aggregated values shape after reprojection: {}".format(attention.shape))
-        #sys.exit()
+        # print("Aggregated values shape before reprojection: {}".format(aggregated_values.shape))
+        attention = self.reprojection(aggregated_values.transpose(1, 2))
+        # print("Aggregated values shape after reprojection: {}".format(attention.shape))
+        # sys.exit()
         return attention
-    
 
     @torch.jit.ignore
     def no_weight_decay(self):
-        return {'temperature', 'temperature2'}
+        return {"temperature", "temperature2"}
 
-TransformerBlock_3D_EA = partial(TransformerBlock_LKA3D, ep_block=EfficientAttention)
+
+TransformerBlock_3D_EA = partial(TransformerBlock_LKA3D, epa_block=EfficientAttention)
 
 
 #########################
 #
 # 3D LKA with SE Module
-# 
+#
 #########################
 class SEModule(nn.Module):
-    """ SE Module as defined in original SE-Nets with a few additions
+    """SE Module as defined in original SE-Nets with a few additions
     Additions include:
         * divisor can be specified to keep channels % div == 0 (default: 8)
         * reduction channels can be specified directly by arg (if rd_channels is set)
@@ -610,8 +669,8 @@ class SEModule(nn.Module):
         * global max pooling can be added to the squeeze aggregation
         * customizable activation, normalization, and gate layer
     """
-    def __init__(
-            self, channels, rd_ratio=1. / 4, rd_channels=None, bias=True):
+
+    def __init__(self, channels, rd_ratio=1.0 / 4, rd_channels=None, bias=True):
         super(SEModule, self).__init__()
         if rd_channels is None:
             rd_channels = int(channels * rd_ratio)
@@ -622,25 +681,27 @@ class SEModule(nn.Module):
         print("Using SE Module")
 
     def forward(self, x):
-        x_se = x.mean((2, 3, 4), keepdim=True) # B C H W D --> B C 1 1 1
-        x_se = self.fc1(x_se) # B C 1 1 1
+        x_se = x.mean((2, 3, 4), keepdim=True)  # B C H W D --> B C 1 1 1
+        x_se = self.fc1(x_se)  # B C 1 1 1
         x_se = self.act(x_se)
         x_se = self.fc2(x_se)
         return x * self.gate(x_se)
+
 
 class TransformerBlock_3D_SE(nn.Module):
     """
     A transformer block, based on: "Shaker et al.,
     UNETR++: Delving into Efficient and Accurate 3D Medical Image Segmentation"
     """
+
     def __init__(
-            self,
-            input_size: int,
-            hidden_size: int,
-            proj_size: int,
-            num_heads: int,
-            dropout_rate: float = 0.0,
-            pos_embed=False,
+        self,
+        input_size: int,
+        hidden_size: int,
+        proj_size: int,
+        num_heads: int,
+        dropout_rate: float = 0.0,
+        pos_embed=False,
     ) -> None:
         """
         Args:
@@ -653,7 +714,7 @@ class TransformerBlock_3D_SE(nn.Module):
 
         """
         super().__init__()
-        #print("Using LKA Attention")
+        # print("Using LKA Attention")
 
         if not (0 <= dropout_rate <= 1):
             raise ValueError("dropout_rate should be between 0 and 1.")
@@ -665,10 +726,14 @@ class TransformerBlock_3D_SE(nn.Module):
 
         self.norm = nn.LayerNorm(hidden_size)
         self.gamma = nn.Parameter(1e-6 * torch.ones(hidden_size), requires_grad=True)
-        self.se = SEModule(channels=hidden_size, rd_ratio=1./4)
+        self.se = SEModule(channels=hidden_size, rd_ratio=1.0 / 4)
         self.LKA_block = LKA3D_571_Block(d_model=hidden_size)
-        self.conv51 = UnetResBlock(3, hidden_size, hidden_size, kernel_size=3, stride=1, norm_name="batch")
-        self.conv8 = nn.Sequential(nn.Dropout3d(0.1, False), nn.Conv3d(hidden_size, hidden_size, 1))
+        self.conv51 = UnetResBlock(
+            3, hidden_size, hidden_size, kernel_size=3, stride=1, norm_name="batch"
+        )
+        self.conv8 = nn.Sequential(
+            nn.Dropout3d(0.1, False), nn.Conv3d(hidden_size, hidden_size, 1)
+        )
 
         self.pos_embed = None
         if pos_embed:
@@ -681,12 +746,14 @@ class TransformerBlock_3D_SE(nn.Module):
 
         if self.pos_embed is not None:
             x = x + self.pos_embed
-        
-        x = x.permute(0,2,1).reshape(B, C, H, W, D) # B N C --> B C N --> B C H W D
+
+        x = x.permute(0, 2, 1).reshape(B, C, H, W, D)  # B N C --> B C N --> B C H W D
         x = self.se(x)
         x = x.reshape(B, C, H * W * D).permute(0, 2, 1)
-        attn = x + self.gamma * self.LKA_block(self.norm(x), B, C, H , W , D)
-        attn_skip = attn.reshape(B, H, W, D, C).permute(0, 4, 1, 2, 3)  # (B, C, H, W, D)
+        attn = x + self.gamma * self.LKA_block(self.norm(x), B, C, H, W, D)
+        attn_skip = attn.reshape(B, H, W, D, C).permute(
+            0, 4, 1, 2, 3
+        )  # (B, C, H, W, D)
         attn = self.conv51(attn_skip)
         x = attn_skip + self.conv8(attn)
 

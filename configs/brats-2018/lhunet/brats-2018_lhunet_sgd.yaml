@@ -36,19 +36,19 @@ data_loader:
   train: 
     batch_size: 2
     shuffle: true
-    num_workers: 12
+    num_workers: 14
     pin_memory: true
     persistent_workers: true
   validation: 
     batch_size: 1
     shuffle: false
-    num_workers: 12
+    num_workers: 14
     pin_memory: true
     persistent_workers: true
   test:
     batch_size: 1
     shuffle: false
-    num_workers: 12
+    num_workers: 14
     pin_memory: false
     persistent_workers: true
 training:
@@ -70,7 +70,7 @@ training:
   epochs: 1000
   
 model: 
-  name: 'lhUNET_SGD_V7_cat_res_sum_coll'
+  name: 'lhUNET_SGD_FINAL'
   params:
     spatial_shapes: [128,128,128]
     do_ds: false # Deep Supervision
@@ -78,10 +78,10 @@ model:
     out_channels: 4
         
      # encoder params
-    cnn_kernel_sizes: [5,3]
+    cnn_kernel_sizes: [3,3]
     cnn_features: [16,32]
     cnn_strides: [2,2]
-    cnn_maxpools: [false, true]
+    cnn_maxpools: [true, true]
     cnn_dropouts: 0.0
     cnn_blocks: nn # n: resunet, d: deformconv, b: basicunet
     hyb_kernel_sizes: [3,3,3]
@@ -89,9 +89,9 @@ model:
     hyb_strides: [2,2,2]
     hyb_maxpools: [true,true,true]
     hyb_cnn_dropouts: 0.0
-    hyb_tf_proj_sizes: [32,64,128]
+    hyb_tf_proj_sizes: [64,32,0]
     hyb_tf_repeats: [1,1,1]
-    hyb_tf_num_heads: [2,4,8]
+    hyb_tf_num_heads: [4,4,4]
     hyb_tf_dropouts: 0.0
     hyb_cnn_blocks: nnn # n: resunet, d: deformconv, b: basicunet
     hyb_vit_blocks: SSC # s: dlka_special_v2, S: dlka_sp_seq, c: dlka_channel_v2, C: dlka_ch_seq

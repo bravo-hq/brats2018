@@ -7,6 +7,8 @@ from ..blocks import *
 from ..blocks.base import BaseBlock
 from ..blocks.hyb import get_vit_block
 
+# from ....neural_network import SegmentationNetwork
+
 
 __all__ = ["LHUNet"]
 
@@ -188,7 +190,7 @@ class LHUNet(BaseBlock):
         #         [int(np.ceil(ss * st)) for ss, st in zip(dec_spatial_shaps[-1], stride)]
         #     )
         dec_spatial_shaps = [enc_spatial_shaps[-2]]
-        for stride in hyb_strides[::-1] + cnn_strides[::-1]:
+        for stride in hyb_strides[::-1][1:] + cnn_strides[::-1]:
             dec_spatial_shaps.append(
                 [int(np.ceil(ss * st)) for ss, st in zip(dec_spatial_shaps[-1], stride)]
             )
@@ -336,7 +338,7 @@ class LHUNet(BaseBlock):
 
         self.num_classes = out_channels
 
-        # self.apply(self._init_weights)
+        self.apply(self._init_weights)
 
     def forward(self, x):
         in_x = x.clone()

@@ -127,9 +127,7 @@ class Brats2018(Dataset):
         vl_index = int(len(patients_dir) * self.vl_split)
         te_index = int(len(patients_dir) * self.te_split)
         if self.mode == "tr":
-            self.patients_list = patients_dir[
-                te_index + vl_index : (int)(len(patients_dir) - 150)
-            ]
+            self.patients_list = patients_dir[te_index + vl_index :]
         elif self.mode == "te":
             self.patients_list = patients_dir[:te_index]
         elif self.mode == "vl":

@@ -378,7 +378,8 @@ class CNNEncoder(BaseBlock):
                 dropout=do,
             )
             if mp:
-                maxpool = nn.MaxPool3d(kernel_size=3, stride=2, padding=1)
+                # maxpool = nn.MaxPool3d(kernel_size=3, stride=2, padding=1)
+                maxpool = nn.MaxPool3d(kernel_size=st, stride=st)
                 self.encoder_blocks.append(nn.Sequential(encoder, maxpool))
             else:
                 self.encoder_blocks.append(encoder)

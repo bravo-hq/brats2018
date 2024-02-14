@@ -7,6 +7,8 @@ from ..blocks import *
 from ..blocks.base import BaseBlock, get_conv_layer
 from ..blocks.hyb import get_vit_block
 
+# from ....neural_network import SegmentationNetwork
+
 
 __all__ = ["LHUNet"]
 
@@ -15,6 +17,7 @@ __all__ = ["LHUNet"]
 Concatenating skips
 Out with ViT
 """
+
 
 class LHUNet(BaseBlock):
     def __init__(
@@ -187,7 +190,7 @@ class LHUNet(BaseBlock):
         #         [int(np.ceil(ss * st)) for ss, st in zip(dec_spatial_shaps[-1], stride)]
         #     )
         dec_spatial_shaps = [enc_spatial_shaps[-2]]
-        for stride in hyb_strides[::-1] + cnn_strides[::-1]:
+        for stride in hyb_strides[::-1][1:] + cnn_strides[::-1]:
             dec_spatial_shaps.append(
                 [int(np.ceil(ss * st)) for ss, st in zip(dec_spatial_shaps[-1], stride)]
             )
@@ -334,30 +337,20 @@ class LHUNet(BaseBlock):
         )
 
         if self.do_ds:
-            self.out_1 = (
-                get_conv_layer(
-                    spatial_dims,
-                    in_channels=dec_cnn_features[-2],
-                    out_channels=out_channels,
-                    kernel_size=1,
-                    stride=1,
-                    dropout=0,
-                    conv_only=True,
-                ),
-            )
-            self.out_2 = get_conv_layer(
+            self.out_1 = UnetOutBlock(
                 spatial_dims,
-                in_channels=dec_hyb_features[-1],
+                in_channels=dec_cnn_features[-1],
                 out_channels=out_channels,
-                kernel_size=1,
-                stride=1,
-                dropout=0,
-                conv_only=True,
+            )
+            self.out_2 = UnetOutBlock(
+                spatial_dims,
+                in_channels=dec_cnn_features[-2],
+                out_channels=out_channels,
             )
 
         self.num_classes = out_channels
 
-        # self.apply(self._init_weights)
+        self.apply(self._init_weights)
 
     def forward(self, x):
         in_x = x.clone()
@@ -383,5 +376,9 @@ class LHUNet(BaseBlock):
         x = self.out(x)
 
         if self.do_ds:
-            return [x, self.out_1(dec_cnn_outs[-2]), self.out_2(dec_hyb_outs[-1])]
+            return [
+                x,
+                F.interpolate(self.out_1(dec_cnn_outs[-1]), scale_factor=0.5),
+                F.interpolate(self.out_2(dec_cnn_outs[-2]), scale_factor=0.5),
+            ]
         return x
