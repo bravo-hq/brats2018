@@ -70,35 +70,50 @@ training:
   epochs: 1000
   
 model: 
-  name: 'lhunet_SGD'
+  name: 'lhUNET_SGD_FINAL_feat_12,16,32,64,128_heads_4,4,8_kernels_3'
   params:
     spatial_shapes: [128,128,128]
+    do_ds: false # Deep Supervision
     in_channels: 4
     out_channels: 4
-                 
-    # encoder params
-    cnn_kernel_sizes: [5,3]
-    cnn_features: [16,16]
+        
+     # encoder params
+    cnn_kernel_sizes: [3,3]
+    cnn_features: [12,16]
     cnn_strides: [2,2]
-    cnn_maxpools: [false, true]
+    cnn_maxpools: [true, true]
     cnn_dropouts: 0.0
+    cnn_blocks: nn # n: resunet, d: deformconv, b: basicunet
     hyb_kernel_sizes: [3,3,3]
     hyb_features: [32,64,128]
     hyb_strides: [2,2,2]
-    hyb_maxpools: [true, true, true]
+    hyb_maxpools: [true,true,true]
     hyb_cnn_dropouts: 0.0
-    hyb_tf_proj_sizes: [32,64,64]
+    hyb_tf_proj_sizes: [64,32,0]
     hyb_tf_repeats: [1,1,1]
-    hyb_tf_num_heads: [2,4,8]
-    hyb_tf_dropouts: 0.15
-    cnn_deforms: [false, false]
-    hyb_use_cnn: [true,true,true]
-    hyb_deforms: [false,false,false]
+    hyb_tf_num_heads: [4,4,8]
+    hyb_tf_dropouts: 0.1
+    hyb_cnn_blocks: nnn # n: resunet, d: deformconv, b: basicunet
+    hyb_vit_blocks: SSC # s: dlka_special_v2, S: dlka_sp_seq, c: dlka_channel_v2, C: dlka_ch_seq
+    # hyb_vit_sandwich: false
+    hyb_skip_mode: "cat" # "sum" or "cat"
+    hyb_arch_mode: "residual" # sequential, residual, parallel, collective
+    hyb_res_mode: "sum" # "sum" or "cat"
 
+    # bridge 
+    br_use: true
+    br_skip_levels: [0,1,2,3]
+    br_c_attn_use: true 
+    br_s_att_use: true 
+    br_m_att_use: true 
+    br_use_p_ttn_w: true
+                
     # decoder params
     dec_hyb_tcv_kernel_sizes: [5,5,5]
     dec_cnn_tcv_kernel_sizes: [5,7]
-    
+    dec_cnn_blocks: null
+    dec_tcv_bias: false
+    dec_hyb_tcv_bias: false
     dec_hyb_kernel_sizes: null
     dec_hyb_features: null
     dec_hyb_cnn_dropouts: null
@@ -109,18 +124,14 @@ model:
     dec_cnn_kernel_sizes: null
     dec_cnn_features: null
     dec_cnn_dropouts: null
-
-    dec_cnn_deforms: [false, false]
-    dec_hyb_deforms: null
-
-    # bridge 
-    br_skip_levels: [0,1,2,3]
-    br_c_attn_use: true 
-    br_s_att_use: true 
-    br_m_att_use: false 
-    br_use_p_ttn_w: true
+    dec_hyb_cnn_blocks: null
+    dec_hyb_vit_blocks: null
+    # dec_hyb_vit_sandwich: null
+    dec_hyb_skip_mode: null
+    dec_hyb_arch_mode: "collective" # sequential, residual, parallel, collective, sequential-lite
+    dec_hyb_res_mode: null
 
 use_sliding_window: true
 sliding_window_params:
-  overlap: 0.75
+  overlap: 0.05
   mode: 'gaussian'
