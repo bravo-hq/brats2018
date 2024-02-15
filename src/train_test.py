@@ -63,11 +63,11 @@ def configure_logger(config, parent_dir):
 
 def configure_trainer(config, logger):
     checkpoint_callback = ModelCheckpoint(
-        monitor="val_loss",
+        monitor="val_total_dice",
         dirpath=logger.log_dir,
-        filename=f"{config['model']['name']}-{{epoch:02d}}-{{val_loss:.4f}}",
+        filename=f"{config['model']['name']}-{{epoch:02d}}-{{val_total_dice:.6f}}",
         save_top_k=3,
-        mode="min",
+        mode="max",
         save_last=True,
     )
     early_stop_callback = EarlyStopping(
@@ -175,7 +175,7 @@ def main():
             trainer.fit(
                 model,
                 train_dataloaders=tr_loader,
-                val_dataloaders=vl_loader,
+                val_dataloaders=te_loader,
                 ckpt_path=ckpt_path,
             )
         else:
@@ -185,7 +185,7 @@ def main():
             trainer.fit(
                 model,
                 train_dataloaders=tr_loader,
-                val_dataloaders=vl_loader,
+                val_dataloaders=te_loader,
                 ckpt_path=ckpt_path,
             )
 
