@@ -119,12 +119,11 @@ class SemanticSegmentation3D(pl.LightningModule):
         return imgs, msks
 
     def on_epoch_end(self, stage: str):
-        if stage == "vl":
-            total_dice=[]
+        total_dice = []
         for type_ in self.types:
             metric = self.metrics[stage][type_].compute()
             self.log_dict({f"{k}": v for k, v in metric.items()})
-            total_dice.append(metric["Dice"])
+            total_dice.append(metric[f"metrics_{self.modes_dict[stage]}_{type_}/Dice"])
             self.metrics[stage][type_].reset()
         if stage == "vl":
             self.log("val_total_dice", sum(total_dice) / len(total_dice))
