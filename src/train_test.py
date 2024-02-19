@@ -51,23 +51,31 @@ def get_base_directory():
 
 
 def configure_logger(config, parent_dir):
-    if config["LRZ_node"]:
-        path = os.path.join(
-            f"/cabinet/yousef/{(config['dataset']['name'].split('_')[0])}/",
-            "tb_logs",
-        )
-    else:
-        path = os.path.join(parent_dir, "tb_logs")
+    # if config["LRZ_node"]:
+    #     path = os.path.join(
+    #         f"/cabinet/yousef/{(config['dataset']['name'].split('_')[0])}/",
+    #         "tb_logs",
+    #     )
+    # else:
+    path = os.path.join(parent_dir, "tb_logs")
     return TensorBoardLogger(path, name=config["model"]["name"])
 
 
 def configure_trainer(config, logger):
+    # checkpoint_callback = ModelCheckpoint(
+    #     monitor="val_total_dice",
+    #     dirpath=logger.log_dir,
+    #     filename=f"{config['model']['name']}-{{epoch:02d}}-{{val_total_dice:.6f}}",
+    #     save_top_k=3,
+    #     mode="max",
+    #     save_last=True,
+    # )
     checkpoint_callback = ModelCheckpoint(
-        monitor="val_total_dice",
+        monitor="val_loss",
         dirpath=logger.log_dir,
-        filename=f"{config['model']['name']}-{{epoch:02d}}-{{val_total_dice:.6f}}",
+        filename=f"{config['model']['name']}-{{epoch:02d}}-{{val_loss:.6f}}",
         save_top_k=3,
-        mode="max",
+        mode="min",
         save_last=True,
     )
     early_stop_callback = EarlyStopping(
@@ -175,7 +183,7 @@ def main():
             trainer.fit(
                 model,
                 train_dataloaders=tr_loader,
-                val_dataloaders=te_loader,
+                val_dataloaders=vl_loader,
                 ckpt_path=ckpt_path,
             )
         else:
@@ -185,7 +193,7 @@ def main():
             trainer.fit(
                 model,
                 train_dataloaders=tr_loader,
-                val_dataloaders=te_loader,
+                val_dataloaders=vl_loader,
                 ckpt_path=ckpt_path,
             )
 

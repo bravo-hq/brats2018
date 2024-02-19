@@ -74,10 +74,29 @@ def load_config(config_filepath):
     try:
         with open(config_filepath, "r") as file:
             config = yaml.safe_load(file)
-            return config
+            expanded_config = expand_env_vars_in_data(config)
+            return expanded_config
     except FileNotFoundError:
         _print(f"Config file not found! <{config_filepath}>", "error_bold")
         exit(1)
+        
+def expand_env_vars_in_data(data):
+    """
+    Recursively walk through the data structure,
+    expanding environment variables in string values.
+    """
+    if isinstance(data, dict):
+        # For dictionaries, apply expansion to each value
+        return {key: expand_env_vars_in_data(value) for key, value in data.items()}
+    elif isinstance(data, list):
+        # For lists, apply expansion to each element
+        return [expand_env_vars_in_data(element) for element in data]
+    elif isinstance(data, str):
+        # For strings, expand environment variables
+        return os.path.expandvars(data)
+    else:
+        # For all other data types, return as is
+        return data
 
 
 import json
