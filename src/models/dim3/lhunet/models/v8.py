@@ -6,8 +6,7 @@ from ..blocks.cnn import UnetResBlock, UnetOutBlock
 from ..blocks import *
 from ..blocks.base import BaseBlock, get_conv_layer
 from ..blocks.hyb import get_vit_block
-
-# from ....neural_network import SegmentationNetwork
+from ....neural_network import SegmentationNetwork
 
 
 __all__ = ["LHUNet"]
@@ -19,7 +18,7 @@ Out with ViT
 """
 
 
-class LHUNet(BaseBlock):
+class LHUNet(BaseBlock, SegmentationNetwork):
     def __init__(
         self,
         spatial_shapes,
@@ -350,7 +349,7 @@ class LHUNet(BaseBlock):
 
         self.num_classes = out_channels
 
-        self.apply(self._init_weights)
+        # self.apply(self._init_weights)
 
     def forward(self, x):
         in_x = x.clone()

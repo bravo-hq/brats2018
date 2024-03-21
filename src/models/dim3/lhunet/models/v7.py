@@ -7,8 +7,6 @@ from ..blocks import *
 from ..blocks.base import BaseBlock
 from ..blocks.hyb import get_vit_block
 
-# from ....neural_network import SegmentationNetwork
-
 
 __all__ = ["LHUNet"]
 
@@ -17,9 +15,10 @@ __all__ = ["LHUNet"]
 Concatenating skips
 Out with ViT
 """
+from ....neural_network import SegmentationNetwork
 
 
-class LHUNet(BaseBlock):
+class LHUNet(SegmentationNetwork):
     def __init__(
         self,
         spatial_shapes,
@@ -183,18 +182,18 @@ class LHUNet(BaseBlock):
             enc_spatial_shaps.append(
                 [int(np.ceil(ss / st)) for ss, st in zip(enc_spatial_shaps[-1], stride)]
             )
-
+        # print(f"enc_spatial_shaps: {enc_spatial_shaps}")
         # dec_spatial_shaps = [enc_spatial_shaps[-1]]
         # for stride in hyb_strides[::-1] + cnn_strides[::-1]:
         #     dec_spatial_shaps.append(
         #         [int(np.ceil(ss * st)) for ss, st in zip(dec_spatial_shaps[-1], stride)]
         #     )
         dec_spatial_shaps = [enc_spatial_shaps[-2]]
-        for stride in hyb_strides[::-1][1:] + cnn_strides[::-1]:
+        for stride in hyb_strides[::-1] + cnn_strides[::-1]:
             dec_spatial_shaps.append(
                 [int(np.ceil(ss * st)) for ss, st in zip(dec_spatial_shaps[-1], stride)]
             )
-
+        # print(f"dec_spatial_shaps: {dec_spatial_shaps}")
         # x: torch.Size([1, 256, 5, 8, 8]), skip: torch.Size([1, 64, 20, 32, 32]), out: torch.Size([1, 128, 10, 16, 16]), conv:{'tcv_in_channels': 256, 'tcv_out_channels': 128, 'conv_in_channels': 256, 'conv_out_channels': 128, 'vit_input_size': 320, 'vit_hidden_size': 128, 'vit_proj_size': 64, 'vit_num_heads': 8}
         # x: torch.Size([1, 256, 5, 8, 8]), skip: torch.Size([1, 64, 20, 32, 32]), out: torch.Size([1, 128, 10, 16, 16]), conv:{'tcv_in_channels': 256, 'tcv_out_channels': 128, 'conv_in_channels': 256, 'conv_out_channels': 128, 'vit_input_size': 2560, 'vit_hidden_size': 128, 'vit_proj_size': 64, 'vit_num_heads': 8}
 
@@ -214,6 +213,9 @@ class LHUNet(BaseBlock):
         dec_hyb_tf_input_sizes = [
             np.prod(ss, dtype=int) for ss in dec_hyb_spatial_shaps
         ]
+        # print(f"decoder: {dec_hyb_tf_input_sizes}")
+        # import sys
+        # sys.exit()
 
         # ------------------------------------- Initialization --------------------------------
         self.init = nn.Sequential(
@@ -338,7 +340,7 @@ class LHUNet(BaseBlock):
 
         self.num_classes = out_channels
 
-        self.apply(self._init_weights)
+        # self.apply(self._init_weights)
 
     def forward(self, x):
         in_x = x.clone()

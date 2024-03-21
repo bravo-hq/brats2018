@@ -73,7 +73,7 @@ class LKA3D_5731(nn.Module):
 class DLKA3D(nn.Module):
     def __init__(self, dim):
         super().__init__()
-        if dim < 33:
+        if dim < 33 or True:
             kernel_dwd = 7
             dilation_dwd = 3
             padding_dwd = 9
@@ -180,6 +180,22 @@ class DLKA3D_Static(nn.Module):
         return u * attn
 
 
+# class DLKA3D_Block_onTensor(nn.Module):
+#     def __init__(self, d_model):
+#         super().__init__()
+#         self.proj_1 = nn.Conv3d(d_model, d_model, 1)
+#         self.activation = nn.GELU()
+#         self.spatial_gating_unit = DLKA3D(d_model)
+#         self.proj_2 = nn.Conv3d(d_model, d_model, 1)
+
+#     def forward(self, x):
+#         shortcut = x.clone()
+#         x = self.proj_1(x)
+#         x = self.activation(x)
+#         x = x * self.spatial_gating_unit(x)
+#         x = self.proj_2(x)
+#         return x
+
 class DLKA3D_Block_onTensor(nn.Module):
     def __init__(self, d_model):
         super().__init__()
@@ -192,9 +208,9 @@ class DLKA3D_Block_onTensor(nn.Module):
         shortcut = x.clone()
         x = self.proj_1(x)
         x = self.activation(x)
-        x = x * self.spatial_gating_unit(x)
+        x = self.spatial_gating_unit(x)
         x = self.proj_2(x)
-        return x
+        return x + shortcut
 
 
 class LKA3D_Block(nn.Module):

@@ -55,7 +55,7 @@ training:
   optimizer:
     name: 'SGD'
     params:
-      lr: 0.004
+      lr: 0.01
       momentum: 0.99
       weight_decay : 0.00003
       nesterov: true
@@ -70,7 +70,7 @@ training:
   epochs: 1000
   
 model: 
-  name: 'lhUNET_SGD_FINAL_tmp'
+  name: 'lhUNET_SGD_DEV_dr0_V7_hybrid_stride_change_lr0.01_kernel_3_dec_5'
   params:
     spatial_shapes: [128,128,128]
     do_ds: false # Deep Supervision
