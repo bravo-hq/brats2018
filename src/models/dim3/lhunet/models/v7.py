@@ -15,10 +15,11 @@ __all__ = ["LHUNet"]
 Concatenating skips
 Out with ViT
 """
-from ....neural_network import SegmentationNetwork
+# from ....neural_network import SegmentationNetwork
 
 
-class LHUNet(SegmentationNetwork):
+# class LHUNet(SegmentationNetwork):
+class LHUNet(nn.Module):
     def __init__(
         self,
         spatial_shapes,
