@@ -23,18 +23,17 @@ import argparse
 from loader.dataloaders import get_dataloaders
 from utils import load_config, print_config
 from models.get_models import get_model
-from lightning_module import SemanticSegmentation3D
+from lightning_module_brats import SemanticSegmentation3D as brats_module
+from lightning_module_pancreas import SemanticSegmentation3D as la_heart_module
+
 
 warnings.filterwarnings("ignore")
 
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Your script description here")
-    # parser.add_argument(
-    #     "-m", "--model_name", type=str, required=True, help="model name"
-    # )
-    # parser.add_argument("-o", "--optim", type=str, required=True, help="optmizer")
     parser.add_argument("-c", "--config", type=str, required=True, help="config file")
+    parser.add_argument("-f", "--fold", type=int, required=False, default=-1,help="fold") #only for pancrease and LA dataset
     return parser.parse_args()
 
 
@@ -62,6 +61,9 @@ def configure_logger(config, parent_dir):
 
 
 def configure_trainer(config, logger):
+    brats_dataset=True
+    if 'brats' not in config["dataset"]["name"].split("_")[0]:
+        brats_dataset=False
     # checkpoint_callback = ModelCheckpoint(
     #     monitor="val_total_dice",
     #     dirpath=logger.log_dir,
@@ -71,22 +73,20 @@ def configure_trainer(config, logger):
     #     save_last=True,
     # )
     checkpoint_callback = ModelCheckpoint(
-        monitor="val_loss",
+        monitor="val_loss" if brats_dataset else None,
         dirpath=logger.log_dir,
         filename=f"{config['model']['name']}-{{epoch:02d}}-{{val_loss:.6f}}",
-        save_top_k=3,
+        save_top_k=3 if brats_dataset else 1,
         mode="min",
         save_last=True,
     )
-    early_stop_callback = EarlyStopping(
-        monitor="val_loss", min_delta=0.0001, patience=25, verbose=True, mode="min"
-    )
     lr_monitor = LearningRateMonitor(logging_interval="epoch")
     check_val_every_n_epoch = config.get("check_val_every_n_epoch", 1)
+    check_val_every_n_epoch = check_val_every_n_epoch if brats_dataset else config["training"]["epochs"]
+    callbacks = [checkpoint_callback, lr_monitor]
     return Trainer(
         logger=logger,
-        # callbacks=[checkpoint_callback, early_stop_callback],
-        callbacks=[checkpoint_callback, lr_monitor],
+        callbacks=callbacks,
         max_epochs=config["training"]["epochs"],
         check_val_every_n_epoch=check_val_every_n_epoch,
         accelerator="gpu",
@@ -102,15 +102,24 @@ def get_platform():
 
 
 def get_input_size_and_module(config):
-    summary_input_size = (
-        config["data_loader"]["train"]["batch_size"],
-        4 if (config["dataset"]["name"].split("_")[0]) != "acdc" else 1,
-        config["dataset"]["input_size"][2],
-        config["dataset"]["input_size"][0],
-        config["dataset"]["input_size"][1],
-    )
-    return summary_input_size, SemanticSegmentation3D
-
+    if 'brats' in config["dataset"]["name"].split("_")[0]:
+        summary_input_size = (
+            config["data_loader"]["train"]["batch_size"],
+            4,
+            config["dataset"]["input_size"][2],
+            config["dataset"]["input_size"][0],
+            config["dataset"]["input_size"][1],
+        )
+        return summary_input_size, brats_module
+    else:
+        summary_input_size = (
+            config["data_loader"]["train"]["batch_size"],
+            1,
+            config["dataset"]["crop_size"][2],
+            config["dataset"]["crop_size"][0],
+            config["dataset"]["crop_size"][1],
+        )
+        return summary_input_size, la_heart_module
 
 def main():
     set_seed()
@@ -118,16 +127,6 @@ def main():
     BASE_DIR = get_base_directory()
 
     LRZ_NODE = get_platform()
-    # debug_mode = True
-    # if not debug_mode:
-    #     args = parse_arguments()
-    #     CONFIG_NAME = f"metastasis_seg/{args.config.split('_')[1]}/{args.config}.yaml"
-    # else:
-    #     CONFIG_NAME = "metastasis_seg/nnformer3d/met_nnformer3d_sgd.yaml"
-
-    # CONFIG_NAME = (
-    #     f"metastasis_seg/{args.model_name}/met_{args.model_name}_{args.optim}.yaml"
-    # )
 
     args = parse_arguments()
     CONFIG_NAME = (
@@ -137,6 +136,10 @@ def main():
     CONFIG_FILE_PATH = os.path.join(BASE_DIR, "configs", CONFIG_NAME)
 
     config = load_config(CONFIG_FILE_PATH)
+    if 'brats' not in config["dataset"]["name"].split("_")[0]:
+        if args.fold == -1:
+            raise ValueError("Fold must be determined for pancreas and la_heart dataset!")
+        config["fold"] = args.fold
     print_config(config)
 
     summary_input_size, lightning_module = get_input_size_and_module(config)

@@ -12,8 +12,7 @@ from optimizers import *
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from typing import Union, Tuple, Dict
 from fvcore.nn import FlopCountAnalysis
-from ptflops import get_model_complexity_info
-
+from typing import Tuple
 
 class SemanticSegmentation3D(pl.LightningModule):
     def __init__(self, config: dict, model=None):
@@ -37,12 +36,7 @@ class SemanticSegmentation3D(pl.LightningModule):
         modes = ["tr", "vl", "te"]
         self.modes_dict = {"tr": "train", "vl": "val", "te": "test"}
 
-        self.datatype = (config["dataset"]["name"].split("_")[0]).lower()
-
-        self.types = (
-            ["wt", "tc", "et"] if self.datatype != "acdc" else ["rv", "myo", "lv"]
-        )
-
+        self.types = ["wt", "tc", "et"] 
         self.metrics = {}
         for mode in modes:
             self.metrics[mode] = {}
@@ -61,7 +55,7 @@ class SemanticSegmentation3D(pl.LightningModule):
         print(f"Total trainable parameters: {round(n_parameters * 1e-6, 2)} M")
         # self.log("n_parameters_M", round(n_parameters * 1e-6, 2))
         size = config["dataset"]["input_size"]
-        input_res = (1 if self.datatype == "acdc" else 4, size[2], size[0], size[1])
+        input_res = (4, size[2], size[0], size[1])
         input = torch.ones(()).new_empty(
             (1, *input_res),
             dtype=next(self.model.parameters()).dtype,
@@ -71,16 +65,7 @@ class SemanticSegmentation3D(pl.LightningModule):
         flops = FlopCountAnalysis(self.model, input)
         total_flops = flops.total()
         print(f"MAdds: {round(total_flops * 1e-9, 2)} G")
-        # self.log("GFLOPS", round(total_flops * 1e-9, 2))
 
-        # ##### calculate the params and FLOPs (ptflops)
-        flops, params = get_model_complexity_info(
-            self.model, input_res, as_strings=True, print_per_layer_stat=False
-        )
-        print("{:<30}  {:<8}".format("Computational complexity: ", flops))
-        print("{:<30}  {:<8}".format("Number of parameters: ", params))
-        # self.log("n_parameters_M", params)
-        # self.log("GFLOPS", flops)
 
         self.lr = self.config["training"]["optimizer"]["params"]["lr"]
         self.log_pictures = config["checkpoints"]["log_pictures"]
@@ -113,7 +98,7 @@ class SemanticSegmentation3D(pl.LightningModule):
     def forward(self, x):
         return self.model(x)
 
-    def _extract_data(self, batch: dict) -> (torch.Tensor, torch.Tensor):
+    def _extract_data(self, batch: dict) -> Tuple[torch.Tensor, torch.Tensor]:
         imgs = batch["volume"].float()
         msks = batch["seg-volume"].type(torch.uint8)
         return imgs, msks
@@ -212,7 +197,6 @@ class SemanticSegmentation3D(pl.LightningModule):
         gts: torch.Tensor,
     ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
         if isinstance(preds, (list, tuple)):  # TODO: for the supervision case
-            # just doing it for the SegResNetVAE case, where the output is a list of 2 elements
             weights = self._cal_loss_weights(preds)
             loss_dict = self._cal_loss_for_supervision(preds, gts, weights)
             preds = preds[0]
@@ -231,20 +215,8 @@ class SemanticSegmentation3D(pl.LightningModule):
         return loss
 
     def _cal_loss_weights(self, preds: list | tuple) -> list:
-        if self.model_name == "SegResNetVAE3D":
-            weights = [1.0, 0.1]
-        else:
-            weights = np.array([1 / (2**i) for i in range(len(preds))])
-            if self.model_name == "TransUnet3D":
-                mask = np.array(
-                    [True]
-                    + [
-                        True if i < len(preds) - 1 else False
-                        for i in range(1, len(preds))
-                    ]
-                )
-                weights[~mask] = 0
-            weights = weights / weights.sum()
+        weights = np.array([1 / (2**i) for i in range(len(preds))])
+        weights = weights / weights.sum()
         return weights
 
     def _cal_global_loss(self, preds: torch.Tensor, gts: torch.Tensor) -> torch.Tensor:
@@ -265,10 +237,7 @@ class SemanticSegmentation3D(pl.LightningModule):
         self, preds: torch.Tensor, gts: torch.Tensor, stage: str
     ) -> None:
         metrics = self.metrics[stage]
-        if self.datatype == "acdc":
-            preds_list, gts_list = self._contstruct_rv_myo_lv(preds, gts)
-        else:
-            preds_list, gts_list = self._contstruct_wt_tc_et(preds, gts)
+        preds_list, gts_list = self._contstruct_wt_tc_et(preds, gts)
         for index, type_ in enumerate(self.types):
             pred = preds_list[index].float()
             gt = gts_list[index].type(torch.uint8)
@@ -322,20 +291,9 @@ class SemanticSegmentation3D(pl.LightningModule):
         nib.save(mask_img, os.path.join(name_dir, f"{name}-seg.nii.gz"))
         nib.save(preds_img, os.path.join(name_dir, f"{name}-pred.nii.gz"))
 
-    def _contstruct_rv_myo_lv(
-        self, preds: torch.Tensor, gts: torch.Tensor
-    ) -> (list, list):
-        preds_list = []
-        gts_list = []
-        preds_labels = torch.argmax(F.softmax(preds, dim=1), dim=1).unsqueeze(1)
-        for i, type in enumerate(["rv", "myo", "lv"]):
-            preds_list.append((preds_labels == i + 1).type(torch.uint8))
-            gts_list.append((gts == i + 1).type(torch.uint8))
-        return preds_list, gts_list
-
     def _contstruct_wt_tc_et(
         self, preds: torch.Tensor, gts: torch.Tensor
-    ) -> (list, list):
+    ) -> Tuple[list, list]:
         preds_list = []
         gts_list = []
         preds_labels = torch.argmax(F.softmax(preds, dim=1), dim=1).unsqueeze(1)
@@ -386,84 +344,6 @@ class SemanticSegmentation3D(pl.LightningModule):
             grid_et,
             batch_idx * self.test_batch_size + patient_idx,
         )
-
-    def _cal_loss_for_supervision(
-        self,
-        preds: list[torch.Tensor],
-        gts: torch.Tensor,
-        dilated_masks: torch.Tensor | None,
-        instance_gts: torch.Tensor | None,
-        weights: np.ndarray,
-    ):
-        assert len(preds) == len(weights), "preds and weights must have the same length"
-
-        if self.model_name == "SegResNetVAE3D":
-            return self._handle_seg_res_net_vae(
-                preds, gts, dilated_masks, instance_gts, weights
-            )
-
-        gts = gts.type(torch.uint8)
-        losses = {
-            "total_global_loss": torch.tensor([0.0]).to(self.device),
-            "global_loss_wt": None,
-            "global_loss_tc": None,
-            "global_loss_et": None,
-            "total_blob_loss": torch.tensor([0.0]).to(self.device),
-            "blob_loss_wt": None,
-            "blob_loss_tc": None,
-            "blob_loss_et": None,
-            "total_loss": None,
-        }
-
-        for i, pred in enumerate(preds):
-            losses = self._handle_supervision_loss_update(
-                pred, gts, dilated_masks, instance_gts, weights[i], losses
-            )
-        return losses
-
-    def _handle_seg_res_net_vae(self, preds, gts, dilated_masks, instance_gts, weights):
-        """
-        Handle loss calculation for SegResNetVAE3D model.
-
-        This is a separate method for special handling of the "SegResNetVAE3D" model.
-        """
-        losses = self._cal_losses(preds[0], gts, dilated_masks, instance_gts)
-        losses["total_loss"] = losses["total_loss"] * weights[0] + preds[1] * weights[1]
-        return losses
-
-    def _handle_supervision_loss_update(
-        self, pred, gts, dilated_masks, instance_gts, weight, losses
-    ):
-        """
-        Update the losses dictionary with losses from a single prediction.
-        """
-        gt_downsampled = F.interpolate(gts, size=pred.shape[2:], mode="nearest-exact")
-
-        # Only downsample if blob loss weight is not zero
-        if self.blob_loss_weight != 0.0:
-            dilated_downsampled = F.interpolate(
-                dilated_masks, size=pred.shape[2:], mode="nearest-exact"
-            )
-            instance_downsampled = F.interpolate(
-                instance_gts, size=pred.shape[2:], mode="nearest-exact"
-            )
-        else:
-            dilated_downsampled = None
-            instance_downsampled = None
-
-        local_loss_dict = self._cal_losses(
-            pred, gt_downsampled, dilated_downsampled, instance_downsampled
-        )
-
-        for key, value in local_loss_dict.items():
-            if value is not None:
-                losses[key] = (
-                    (losses[key] + value * weight)
-                    if losses[key] is not None
-                    else value * weight
-                )
-
-        return losses
 
     def _forward_pass(self, imgs: torch.Tensor, stage: str) -> torch.Tensor | list:
         if self.use_sliding_window:

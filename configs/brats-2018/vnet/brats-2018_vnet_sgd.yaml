@@ -10,19 +10,19 @@ dataset:
   input_size: [128,128,128]
   train:
     params:
-      # data_root: "E:/Brats 2018 data"
-      data_root: "/cabinet/dataset/brats/Brats 2018"
+      data_root: "/home/say26747/Desktop/datasets/Brats 2018"
+      # data_root: "/cabinet/dataset/brats/Brats 2018"
       normalization: true
       p: 0.5
   validation:
     params:
-      # data_root: "E:/Brats 2018 data"
-      data_root: "/cabinet/dataset/brats/Brats 2018"
+      data_root: "/home/say26747/Desktop/datasets/Brats 2018"
+      # data_root: "/cabinet/dataset/brats/Brats 2018"
       normalization: true
   test:
     params:
-      # data_root: "E:/Brats 2018 data"
-      data_root: "/cabinet/dataset/brats/Brats 2018"
+      data_root: "/home/say26747/Desktop/datasets/Brats 2018"
+      # data_root: "/cabinet/dataset/brats/Brats 2018"
       normalization: true
   test_split: 0.2
   validation_split: 0.1
