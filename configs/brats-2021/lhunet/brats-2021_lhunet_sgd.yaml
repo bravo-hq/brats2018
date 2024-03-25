@@ -1,7 +1,7 @@
 is3d: true
 checkpoints:
   continue_training: false
-  test_mode: true
+  test_mode: false
   ckpt_path: '/home/say26747/Desktop/git/brats2018/tb_logs/lhUNET_SGD_FINAL_feat_12,16,32,64,128_heads_4,4,8_kernels_3_true_val_brats_2021/version_1/lhUNET_SGD_FINAL_feat_12,16,32,64,128_heads_4,4,8_kernels_3_true_val_brats_2021-epoch=970-val_loss=0.063289.ckpt'
   log_pictures: false
   save_nifty: true
@@ -11,6 +11,7 @@ dataset:
   train:
     params:
       data_root: "/home/say26747/Desktop/datasets/Brats 2021/data"
+      # data_root: "$TMPDIR/data"
       # data_root: "/cabinet/dataset/brats/Brats 2021/data"
       normalization: true
       augmentation: true  
@@ -19,6 +20,7 @@ dataset:
   validation:
     params:
       data_root: "/home/say26747/Desktop/datasets/Brats 2021/data"
+      # data_root: "$TMPDIR/data"
       # data_root: "/cabinet/dataset/brats/Brats 2021/data"
       normalization: true
       augmentation: false  
@@ -26,6 +28,7 @@ dataset:
   test:
     params:
       data_root: "/home/say26747/Desktop/datasets/Brats 2021/data"
+      # data_root: "$TMPDIR/data"
       # data_root: "/cabinet/dataset/brats/Brats 2021/data"
       normalization: true
       augmentation: false 
@@ -36,19 +39,19 @@ data_loader:
   train: 
     batch_size: 2
     shuffle: true
-    num_workers: 10
+    num_workers: 16
     pin_memory: true
     persistent_workers: true
   validation: 
     batch_size: 1
     shuffle: false
-    num_workers: 10
+    num_workers: 16
     pin_memory: true
     persistent_workers: true
   test:
     batch_size: 1
     shuffle: false
-    num_workers: 10
+    num_workers: 16
     pin_memory: false
     persistent_workers: true
 training:
@@ -66,11 +69,11 @@ training:
   scheduler:
     name: 'CustomDecayLR'
     params:
-      max_epochs: 1000
-  epochs: 1000
+      max_epochs: 300
+  epochs: 300
   
 model: 
-  name: 'lhUNET_SGD_FINAL_feat_12,16,32,64,128_heads_4,4,8_kernels_3_true_val_brats_2021'
+  name: 'lhUNET_SGD_DEV_lr0.1_kernels_3_dec_5_dr_0'
   params:
     spatial_shapes: [128,128,128]
     do_ds: false # Deep Supervision
@@ -92,7 +95,7 @@ model:
     hyb_tf_proj_sizes: [64,32,0]
     hyb_tf_repeats: [1,1,1]
     hyb_tf_num_heads: [4,4,8]
-    hyb_tf_dropouts: 0.1
+    hyb_tf_dropouts: 0.0
     hyb_cnn_blocks: nnn # n: resunet, d: deformconv, b: basicunet
     hyb_vit_blocks: SSC # s: dlka_special_v2, S: dlka_sp_seq, c: dlka_channel_v2, C: dlka_ch_seq
     # hyb_vit_sandwich: false
@@ -110,7 +113,7 @@ model:
                 
     # decoder params
     dec_hyb_tcv_kernel_sizes: [5,5,5]
-    dec_cnn_tcv_kernel_sizes: [5,7]
+    dec_cnn_tcv_kernel_sizes: [5,5]
     dec_cnn_blocks: null
     dec_tcv_bias: false
     dec_hyb_tcv_bias: false
@@ -133,5 +136,5 @@ model:
 
 use_sliding_window: true
 sliding_window_params:
-  overlap: 0.75
+  overlap: 0.5
   mode: 'gaussian'

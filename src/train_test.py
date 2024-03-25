@@ -57,6 +57,10 @@ def configure_logger(config, parent_dir):
     #         f"/cabinet/yousef/{(config['dataset']['name'].split('_')[0])}/",
     #         "tb_logs",
     #     )
+        # path = os.path.join(
+        #     f"/home/hpc/b213da/b213da10/cabinet/results/{(config['dataset']['name'].split('_')[0])}/",
+        #     "tb_logs",
+        # )
     # else:
     path = os.path.join(parent_dir, "tb_logs")
     return TensorBoardLogger(path, name=config["model"]["name"])

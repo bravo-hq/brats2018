@@ -11,6 +11,7 @@ dataset:
   train:
     params:
       data_root: "/home/say26747/Desktop/datasets/Brats 2018"
+      # data_root: "$TMPDIR/MICCAI_BraTS_2018_Data_Training"
       # data_root: "/cabinet/dataset/brats/Brats 2018"
       normalization: true
       augmentation: true  
@@ -19,6 +20,7 @@ dataset:
   validation:
     params:
       data_root: "/home/say26747/Desktop/datasets/Brats 2018"
+      # data_root: "$TMPDIR/MICCAI_BraTS_2018_Data_Training"
       # data_root: "/cabinet/dataset/brats/Brats 2018"
       normalization: true
       augmentation: false  
@@ -26,6 +28,7 @@ dataset:
   test:
     params:
       data_root: "/home/say26747/Desktop/datasets/Brats 2018"
+      # data_root: "$TMPDIR/MICCAI_BraTS_2018_Data_Training"
       # data_root: "/cabinet/dataset/brats/Brats 2018"
       normalization: true
       augmentation: false 
@@ -36,19 +39,19 @@ data_loader:
   train: 
     batch_size: 2
     shuffle: true
-    num_workers: 10
+    num_workers: 16
     pin_memory: true
     persistent_workers: true
   validation: 
     batch_size: 1
     shuffle: false
-    num_workers: 10
+    num_workers: 16
     pin_memory: true
     persistent_workers: true
   test:
     batch_size: 1
     shuffle: false
-    num_workers: 10
+    num_workers: 16
     pin_memory: false
     persistent_workers: true
 training:
@@ -110,7 +113,7 @@ model:
                 
     # decoder params
     dec_hyb_tcv_kernel_sizes: [5,5,5]
-    dec_cnn_tcv_kernel_sizes: [5,7]
+    dec_cnn_tcv_kernel_sizes: [5,5]
     dec_cnn_blocks: null
     dec_tcv_bias: false
     dec_hyb_tcv_bias: false
