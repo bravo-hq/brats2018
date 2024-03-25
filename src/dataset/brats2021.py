@@ -87,17 +87,6 @@ class Brats2021(Dataset):
         )
         self.aug_sample_transform = T.Compose(
             [
-                T.CropForegroundd(
-                    keys=keys,
-                    source_key="volume",
-                    padding_mode="constant",
-                    allow_smaller=True,
-                ),
-                T.SpatialPadd(
-                    keys=keys,
-                    spatial_size=self.crop_size,
-                    mode="constant",
-                ),
                 T.RandRotated(
                     keys=keys,
                     prob=0.15,
