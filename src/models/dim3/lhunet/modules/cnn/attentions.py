@@ -196,6 +196,7 @@ class DLKA3D_Static(nn.Module):
 #         x = self.proj_2(x)
 #         return x
 
+
 class DLKA3D_Block_onTensor(nn.Module):
     def __init__(self, d_model):
         super().__init__()

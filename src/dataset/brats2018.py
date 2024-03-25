@@ -87,6 +87,35 @@ class Brats2018(Dataset):
         )
         self.aug_sample_transform = T.Compose(
             [
+                T.CropForegroundd(
+                    keys=keys,
+                    source_key="volume",
+                    padding_mode="constant",
+                    allow_smaller=True,
+                ),
+                T.SpatialPadd(
+                    keys=keys,
+                    spatial_size=self.crop_size,
+                    mode="constant",
+                ),
+                T.RandRotated(
+                    keys=keys,
+                    prob=0.15,
+                    range_x=np.deg2rad(30),
+                    range_y=np.deg2rad(30),
+                    range_z=np.deg2rad(30),
+                    mode=("trilinear", "nearest"),
+                    padding_mode="zeros",
+                ),
+                T.RandZoomd(
+                    keys=keys,
+                    prob=0.15,
+                    min_zoom=0.7,
+                    max_zoom=1.4,
+                    mode=("trilinear", "nearest"),
+                    padding_mode="constant",
+                    constant_values=0,
+                ),
                 T.RandSpatialCropd(
                     keys=keys,
                     random_center=True,
@@ -107,6 +136,11 @@ class Brats2018(Dataset):
                     prob=self.p,
                     spatial_axis=2,
                 ),  # depth flip
+                T.RandGaussianNoised(keys="volume", std=0.05, prob=0.15),
+                T.RandGaussianSmoothd(keys="volume", prob=0.15),
+                T.RandScaleIntensityd(keys="volume", factors=0.3, prob=0.15),
+                T.RandShiftIntensityd(keys="volume", offsets=1, prob=0.15),
+                T.RandAdjustContrastd(keys="volume", gamma=(0.7, 1.5), prob=0.1),
             ]
         )
 

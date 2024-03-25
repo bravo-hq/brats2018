@@ -79,7 +79,8 @@ def load_config(config_filepath):
     except FileNotFoundError:
         _print(f"Config file not found! <{config_filepath}>", "error_bold")
         exit(1)
-        
+
+
 def expand_env_vars_in_data(data):
     """
     Recursively walk through the data structure,

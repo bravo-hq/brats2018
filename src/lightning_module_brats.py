@@ -14,6 +14,7 @@ from typing import Union, Tuple, Dict
 from fvcore.nn import FlopCountAnalysis
 from typing import Tuple
 
+
 class SemanticSegmentation3D(pl.LightningModule):
     def __init__(self, config: dict, model=None):
         super(SemanticSegmentation3D, self).__init__()
@@ -36,7 +37,7 @@ class SemanticSegmentation3D(pl.LightningModule):
         modes = ["tr", "vl", "te"]
         self.modes_dict = {"tr": "train", "vl": "val", "te": "test"}
 
-        self.types = ["wt", "tc", "et"] 
+        self.types = ["wt", "tc", "et"]
         self.metrics = {}
         for mode in modes:
             self.metrics[mode] = {}
@@ -65,7 +66,6 @@ class SemanticSegmentation3D(pl.LightningModule):
         flops = FlopCountAnalysis(self.model, input)
         total_flops = flops.total()
         print(f"MAdds: {round(total_flops * 1e-9, 2)} G")
-
 
         self.lr = self.config["training"]["optimizer"]["params"]["lr"]
         self.log_pictures = config["checkpoints"]["log_pictures"]
