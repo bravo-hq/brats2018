@@ -190,7 +190,7 @@ class LHUNet(nn.Module):
         #         [int(np.ceil(ss * st)) for ss, st in zip(dec_spatial_shaps[-1], stride)]
         #     )
         dec_spatial_shaps = [enc_spatial_shaps[-2]]
-        for stride in hyb_strides[::-1] + cnn_strides[::-1]:
+        for stride in hyb_strides[::-1][1:] + cnn_strides[::-1]:
             dec_spatial_shaps.append(
                 [int(np.ceil(ss * st)) for ss, st in zip(dec_spatial_shaps[-1], stride)]
             )
