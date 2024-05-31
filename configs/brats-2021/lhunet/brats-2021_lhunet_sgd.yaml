@@ -70,7 +70,7 @@ training:
   epochs: 250
   
 model: 
-  name: 'lhUNET_SGD_FINAL_feat_12,16,32,64,128_heads_4,4,8_kernels_3_true_val_brats_2021'
+  name: 'lhUNET_SGD_FINAL_feat_12,16,32,64,128_heads_4,4,8_kernels_3_test_as_val_brats_2021'
   params:
     spatial_shapes: [128,128,128]
     do_ds: false # Deep Supervision

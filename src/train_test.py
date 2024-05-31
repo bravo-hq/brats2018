@@ -66,22 +66,22 @@ def configure_trainer(config, logger):
     brats_dataset = True
     if "brats" not in config["dataset"]["name"].split("_")[0]:
         brats_dataset = False
-    # checkpoint_callback = ModelCheckpoint(
-    #     monitor="val_total_dice",
-    #     dirpath=logger.log_dir,
-    #     filename=f"{config['model']['name']}-{{epoch:02d}}-{{val_total_dice:.6f}}",
-    #     save_top_k=3,
-    #     mode="max",
-    #     save_last=True,
-    # )
     checkpoint_callback = ModelCheckpoint(
-        monitor="val_loss" if brats_dataset else None,
+        monitor="val_total_dice",
         dirpath=logger.log_dir,
-        filename=f"{config['model']['name']}-{{epoch:02d}}-{{val_loss:.6f}}",
-        save_top_k=3 if brats_dataset else 1,
-        mode="min",
+        filename=f"{config['model']['name']}-{{epoch:02d}}-{{val_total_dice:.6f}}",
+        save_top_k=3,
+        mode="max",
         save_last=True,
     )
+    # checkpoint_callback = ModelCheckpoint(
+    #     monitor="val_loss" if brats_dataset else None,
+    #     dirpath=logger.log_dir,
+    #     filename=f"{config['model']['name']}-{{epoch:02d}}-{{val_loss:.6f}}",
+    #     save_top_k=3 if brats_dataset else 1,
+    #     mode="min",
+    #     save_last=True,
+    # )
     lr_monitor = LearningRateMonitor(logging_interval="epoch")
     check_val_every_n_epoch = config.get("check_val_every_n_epoch", 1)
     check_val_every_n_epoch = (
@@ -193,7 +193,7 @@ def main():
             trainer.fit(
                 model,
                 train_dataloaders=tr_loader,
-                val_dataloaders=vl_loader,
+                val_dataloaders=te_loader,
                 ckpt_path=ckpt_path,
             )
         else:
@@ -203,7 +203,7 @@ def main():
             trainer.fit(
                 model,
                 train_dataloaders=tr_loader,
-                val_dataloaders=vl_loader,
+                val_dataloaders=te_loader,
                 ckpt_path=ckpt_path,
             )
 
