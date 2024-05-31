@@ -46,16 +46,15 @@ class SemanticSegmentation3D(pl.LightningModule):
             self.metrics[mode] = {}
             for type_ in self.metric_types:
                 self.metrics[mode][type_] = []
-                
-                
+
         # calculate the params and FLOPs
         n_parameters = sum(
             p.numel() for p in self.model.parameters() if p.requires_grad
         )
         print(f"Total trainable parameters: {round(n_parameters * 1e-6, 2)} M")
         # self.log("n_parameters_M", round(n_parameters * 1e-6, 2))
-        
-        input_res = (1,96,96,96)
+
+        input_res = (1, 96, 96, 96)
         input = torch.ones(()).new_empty(
             (1, *input_res),
             dtype=next(self.model.parameters()).dtype,
@@ -260,7 +259,6 @@ class SemanticSegmentation3D(pl.LightningModule):
 
         return [dice, jc, hd, asd]
 
-    
     def _forward_pass(self, imgs: torch.Tensor, stage: str) -> torch.Tensor | list:
         if self.use_sliding_window:
             if stage == "tr":

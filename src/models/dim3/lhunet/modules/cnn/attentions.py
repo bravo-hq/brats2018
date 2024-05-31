@@ -3,6 +3,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 from ..deform_conv import DeformConvPack, DeformConvPack_Depth
+from ...blocks.cnn import UnetResBlock
 
 
 class LKA3D_571(nn.Module):
@@ -192,9 +193,9 @@ class DLKA3D_Block_onTensor(nn.Module):
         shortcut = x.clone()
         x = self.proj_1(x)
         x = self.activation(x)
-        x = x * self.spatial_gating_unit(x)
+        x = self.spatial_gating_unit(x)
         x = self.proj_2(x)
-        return x
+        return x + shortcut
 
 
 class LKA3D_Block(nn.Module):
@@ -308,15 +309,12 @@ class deformable_LKA_Attention(nn.Module):
         # Extract Depths
         for i in range(x.size(-1)):
             x_temp = x[:, :, :, :, i]
-            # print(x_temp.shape)
             x_temp = self.proj_1(x_temp)
             x_temp = self.activation(x_temp)
             x_temp = self.spatial_gating_unit(x_temp)
             x_temp = self.proj_2(x_temp)
             x_copy[:, :, :, :, i] = x_temp
 
-        # print("X shape after loop:{}".format(x.shape))
-        # print("Shorcut shape after loop:{}".format(shorcut.shape))
         x = x_copy + shorcut
         x = x.reshape(B, C, H * W * D).permute(0, 2, 1)  # B N C
         return x
@@ -381,7 +379,6 @@ class TransformerBlock_2Dsingle(nn.Module):
         if self.pos_embed is not None:
             x = x + self.pos_embed
         y = self.norm(x)
-        # print(y.shape)
         z = self.epa_block(y, B, C, H, W, D)
         attn = x + self.gamma * z
         attn_skip = attn.reshape(B, H, W, D, C).permute(

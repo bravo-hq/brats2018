@@ -3,7 +3,6 @@ import torch
 import torch.nn.functional as F
 import pytorch_lightning as pl
 from metrics import get_binary_metrics
-from utils import make_grids
 import numpy as np
 import nibabel as nib
 from monai.losses import DiceCELoss
@@ -14,11 +13,14 @@ from typing import Union, Tuple, Dict
 from fvcore.nn import FlopCountAnalysis
 from typing import Tuple
 
+
 class SemanticSegmentation3D(pl.LightningModule):
     def __init__(self, config: dict, model=None):
         super(SemanticSegmentation3D, self).__init__()
+        ############### initilizing the model and the config ################
         self.config = config
-        self.model = model
+        self.model = model.cuda()
+        ############### initilizing the loss function ################
         lambda_dice = config["training"]["criterion"]["params"].get("dice_weight", 0.5)
         lambda_ce = config["training"]["criterion"]["params"].get("bce_weight", 0.5)
         self.global_loss_weight = config["training"]["criterion"]["params"].get(
@@ -32,11 +34,11 @@ class SemanticSegmentation3D(pl.LightningModule):
             to_onehot_y=True,
         ).to(self.device)
 
-        ## Initialize metrics for each type and mode
+        ############### initilizing the metrics ################
         modes = ["tr", "vl", "te"]
         self.modes_dict = {"tr": "train", "vl": "val", "te": "test"}
 
-        self.types = ["wt", "tc", "et"] 
+        self.types = ["wt", "tc", "et"]
         self.metrics = {}
         for mode in modes:
             self.metrics[mode] = {}
@@ -48,12 +50,12 @@ class SemanticSegmentation3D(pl.LightningModule):
                     .to(self.device)
                 )
 
-        # calculate the params and FLOPs
+        ################# calculation of number of params and FLOPS ################
         n_parameters = sum(
             p.numel() for p in self.model.parameters() if p.requires_grad
         )
         print(f"Total trainable parameters: {round(n_parameters * 1e-6, 2)} M")
-        # self.log("n_parameters_M", round(n_parameters * 1e-6, 2))
+
         size = config["dataset"]["input_size"]
         input_res = (4, size[2], size[0], size[1])
         input = torch.ones(()).new_empty(
@@ -66,9 +68,7 @@ class SemanticSegmentation3D(pl.LightningModule):
         total_flops = flops.total()
         print(f"MAdds: {round(total_flops * 1e-9, 2)} G")
 
-
         self.lr = self.config["training"]["optimizer"]["params"]["lr"]
-        self.log_pictures = config["checkpoints"]["log_pictures"]
         self.save_nifty = config["checkpoints"].get("save_nifty", True)
         self.test_batch_size = config["data_loader"]["test"]["batch_size"]
         if self.test_batch_size != config["data_loader"]["validation"]["batch_size"]:
@@ -138,7 +138,7 @@ class SemanticSegmentation3D(pl.LightningModule):
         self._log_losses(loss, stage)
 
         if stage == "te":
-            self._save_nifty_or_picture(batch, imgs, preds, gts, batch_idx)
+            self._save_nifty(batch, imgs, preds, gts, batch_idx)
 
         return loss
 
@@ -196,7 +196,7 @@ class SemanticSegmentation3D(pl.LightningModule):
         preds: Union[torch.Tensor, list, tuple],
         gts: torch.Tensor,
     ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
-        if isinstance(preds, (list, tuple)):  # TODO: for the supervision case
+        if isinstance(preds, (list, tuple)):
             weights = self._cal_loss_weights(preds)
             loss_dict = self._cal_loss_for_supervision(preds, gts, weights)
             preds = preds[0]
@@ -220,9 +220,7 @@ class SemanticSegmentation3D(pl.LightningModule):
         return weights
 
     def _cal_global_loss(self, preds: torch.Tensor, gts: torch.Tensor) -> torch.Tensor:
-        loss = self.criterion_dice_ce(
-            preds.permute(0, 1, 3, 4, 2).float(), gts.permute(0, 1, 3, 4, 2).float()
-        )
+        loss = self.criterion_dice_ce(preds.float(), gts.float())
         return loss
 
     def _log_losses(self, losses: torch.Tensor, stage: str) -> None:
@@ -244,26 +242,17 @@ class SemanticSegmentation3D(pl.LightningModule):
             metrics[type_].to(self.device)
             metrics[type_].update(pred, gt)
 
-    def _save_nifty_or_picture(self, batch, imgs, preds, gts, batch_idx):
+    def _save_nifty(self, batch, imgs, preds, gts, batch_idx):
         save_dir = self.logger.log_dir
-        if self.log_pictures or self.save_nifty:
+        if self.save_nifty:
             for patient_idx in range(imgs.shape[0]):
-                if self.save_nifty:
-                    self.save_nifty_from_logits_preds(
-                        batch["patient_name"][patient_idx],
-                        batch["affinity"][patient_idx],
-                        preds[patient_idx],
-                        gts[patient_idx],
-                        save_dir,
-                    )
-                if self.log_pictures:
-                    self._log_pictures(
-                        imgs[patient_idx : patient_idx + 1],
-                        preds[patient_idx : patient_idx + 1],
-                        gts[patient_idx : patient_idx + 1],
-                        batch_idx,
-                        patient_idx,
-                    )
+                self.save_nifty_from_logits_preds(
+                    batch["patient_name"][patient_idx],
+                    batch["affinity"][patient_idx],
+                    preds[patient_idx],
+                    gts[patient_idx],
+                    save_dir,
+                )
 
     def save_nifty_from_logits_preds(
         self,
@@ -277,6 +266,7 @@ class SemanticSegmentation3D(pl.LightningModule):
         inputs are 4D tensors (channel,depth,height,width)
         """
         affinity = affinity.detach().cpu().numpy()
+        # not necessary to permute the preds and masks
         preds = preds.permute(0, 2, 3, 1)
         masks = masks.permute(0, 2, 3, 1).squeeze().type(torch.uint8)
         preds_labels = (
@@ -311,39 +301,6 @@ class SemanticSegmentation3D(pl.LightningModule):
 
     def _construct_wt(self, tensor: torch.Tensor) -> torch.Tensor:
         return (((tensor == 3) | (tensor == 1)) | (tensor == 2)).type(torch.uint8)
-
-    def _log_pictures(
-        self,
-        imgs,
-        preds,
-        gts,
-        batch_idx,
-        patient_idx,
-    ):
-        grid_wt, grid_tc, grid_et = make_grids(
-            imgs,
-            gts[:, 0:1],
-            preds[:, 0:1],
-            gts[:, 1:2],
-            preds[:, 1:2],
-            gts[:, 2:3],
-            preds[:, 2:3],
-        )
-        self.logger.experiment.add_image(
-            "pictures_wt",
-            grid_wt,
-            batch_idx * self.test_batch_size + patient_idx,
-        )
-        self.logger.experiment.add_image(
-            "pictures_tc",
-            grid_tc,
-            batch_idx * self.test_batch_size + patient_idx,
-        )
-        self.logger.experiment.add_image(
-            "pictures_et",
-            grid_et,
-            batch_idx * self.test_batch_size + patient_idx,
-        )
 
     def _forward_pass(self, imgs: torch.Tensor, stage: str) -> torch.Tensor | list:
         if self.use_sliding_window:

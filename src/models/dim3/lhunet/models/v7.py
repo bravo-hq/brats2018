@@ -1,25 +1,14 @@
 import numpy as np
 import torch
 from torch import nn
-from torch.nn import functional as F
 from ..blocks.cnn import UnetResBlock, UnetOutBlock
 from ..blocks import *
-from ..blocks.base import BaseBlock
-from ..blocks.hyb import get_vit_block
-
-# from ....neural_network import SegmentationNetwork
 
 
 __all__ = ["LHUNet"]
 
 
-"""
-Concatenating skips
-Out with ViT
-"""
-
-
-class LHUNet(BaseBlock):
+class LHUNet(nn.Module):
     def __init__(
         self,
         spatial_shapes,
@@ -48,13 +37,6 @@ class LHUNet(BaseBlock):
         hyb_skip_mode="sum",
         hyb_arch_mode="sequential",  # sequential, residual, parallel, collective
         hyb_res_mode="sum",  # "sum" or "cat"
-        # bridge params
-        br_use=True,
-        br_skip_levels=[0, 1, 2, 3],
-        br_c_attn_use=True,
-        br_s_att_use=True,
-        br_m_att_use=True,
-        br_use_p_ttn_w=True,
         # decoder params
         dec_hyb_tcv_kernel_sizes=[5, 5, 5],
         dec_cnn_tcv_kernel_sizes=[5, 5, 5],
@@ -80,26 +62,6 @@ class LHUNet(BaseBlock):
     ):
         super().__init__()
         self.do_ds = do_ds
-
-        # # tf attn blocks
-        # tf_blocks = {
-        #     "0": TransformerBlock_Deform_LKA_Channel,
-        #     "1": TransformerBlock_Deform_LKA_Channel_V2,
-        #     "2": TransformerBlock_Deform_LKA_Spatial,
-        #     "3": TransformerBlock_Deform_LKA_Spatial_V2,
-        #     "4": TransformerBlock_3D_single_deform_LKA,
-        #     "5": TransformerBlock_3D_single_deform_LKA_V2,
-        #     "6": TransformerBlock_Deform_LKA_SC,
-        #     "7": TransformerBlock_Deform_LKA_SC_V2,
-        # }
-
-        # bridge params
-        self.br_use = br_use
-        self.br_skip_levels = br_skip_levels
-        self.br_c_attn_use = br_c_attn_use
-        self.br_s_att_use = br_s_att_use
-        self.br_m_att_use = br_m_att_use
-        self.br_use_p_ttn_w = br_use_p_ttn_w
 
         # ------------------------------------- Vars Prepration --------------------------------
         spatial_dims = len(spatial_shapes)
@@ -183,20 +145,11 @@ class LHUNet(BaseBlock):
             enc_spatial_shaps.append(
                 [int(np.ceil(ss / st)) for ss, st in zip(enc_spatial_shaps[-1], stride)]
             )
-
-        # dec_spatial_shaps = [enc_spatial_shaps[-1]]
-        # for stride in hyb_strides[::-1] + cnn_strides[::-1]:
-        #     dec_spatial_shaps.append(
-        #         [int(np.ceil(ss * st)) for ss, st in zip(dec_spatial_shaps[-1], stride)]
-        #     )
         dec_spatial_shaps = [enc_spatial_shaps[-2]]
         for stride in hyb_strides[::-1][1:] + cnn_strides[::-1]:
             dec_spatial_shaps.append(
                 [int(np.ceil(ss * st)) for ss, st in zip(dec_spatial_shaps[-1], stride)]
             )
-
-        # x: torch.Size([1, 256, 5, 8, 8]), skip: torch.Size([1, 64, 20, 32, 32]), out: torch.Size([1, 128, 10, 16, 16]), conv:{'tcv_in_channels': 256, 'tcv_out_channels': 128, 'conv_in_channels': 256, 'conv_out_channels': 128, 'vit_input_size': 320, 'vit_hidden_size': 128, 'vit_proj_size': 64, 'vit_num_heads': 8}
-        # x: torch.Size([1, 256, 5, 8, 8]), skip: torch.Size([1, 64, 20, 32, 32]), out: torch.Size([1, 128, 10, 16, 16]), conv:{'tcv_in_channels': 256, 'tcv_out_channels': 128, 'conv_in_channels': 256, 'conv_out_channels': 128, 'vit_input_size': 2560, 'vit_hidden_size': 128, 'vit_proj_size': 64, 'vit_num_heads': 8}
 
         enc_cnn_spatial_shaps = enc_spatial_shaps[: len(cnn_kernel_sizes)]
         enc_hyb_spatial_shaps = enc_spatial_shaps[
@@ -232,7 +185,7 @@ class LHUNet(BaseBlock):
             dropouts=cnn_dropouts,
             blocks=cnn_blocks,
             spatial_dims=spatial_dims,
-            norm_name="batch",  # ("group", {"num_groups": in_channels}),
+            norm_name="batch",
             act_name=("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
         )
 
@@ -255,7 +208,7 @@ class LHUNet(BaseBlock):
             skip_mode=hyb_skip_mode,
             arch_mode=hyb_arch_mode,
             res_mode=hyb_res_mode,
-            norm_name="batch",  # ("group", {"num_groups": in_channels}),
+            norm_name="batch",
             act_name=("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
         )
 
@@ -282,7 +235,7 @@ class LHUNet(BaseBlock):
             skip_mode=dec_hyb_skip_mode,
             arch_mode=dec_hyb_arch_mode,
             res_mode=dec_hyb_res_mode,
-            norm_name="batch",  # ("group", {"num_groups": in_channels}),
+            norm_name="batch",
             act_name=("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
         )
 
@@ -298,7 +251,7 @@ class LHUNet(BaseBlock):
             # return_outs=self.use_ds,
             spatial_dims=spatial_dims,
             blocks=dec_cnn_blocks,
-            norm_name="batch",  # ("group", {"num_groups": in_channels}),
+            norm_name="batch",
             act_name=("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
         )
 
@@ -312,14 +265,6 @@ class LHUNet(BaseBlock):
             norm_name="batch",
         )
         self.out = nn.Sequential(
-            # get_vit_block(code="S")(
-            #     input_size=np.prod(spatial_shapes),
-            #     hidden_size=dec_cnn_features[-1]*2,
-            #     proj_size=32,
-            #     num_heads=2,
-            #     dropout_rate=0,
-            #     pos_embed=True,
-            # ),
             UnetResBlock(
                 spatial_dims=spatial_dims,
                 in_channels=dec_cnn_features[-1] * 2,
@@ -338,24 +283,19 @@ class LHUNet(BaseBlock):
 
         self.num_classes = out_channels
 
-        self.apply(self._init_weights)
-
     def forward(self, x):
         in_x = x.clone()
         x = self.init(x)
         r = x.clone()
 
         x, cnn_skips = self.cnn_encoder(x)
-        # print(f"after x, cnn_skips = self.cnn_encoder(x) | x:{x.shape}")
+
         x, hyb_skips = self.hyb_encoder(x)
-        # print(f"after x, hyb_skips = self.hyb_encoder(x) | x:{x.shape}")
 
         x = self.hyb_decoder(x, [cnn_skips[-1]] + hyb_skips[:-1])
-        # print(f"after x = self.hyb_decoder(x, hyb_skips) | x:{x.shape}")
-        x = self.cnn_decoder(x, [r] + cnn_skips[:-1])
-        # print(f"after x = self.cnn_decoder(x, cnn_skips) | x:{x.shape}")
 
-        # print(f"after decoder -> x:{x.shape}, r:{r.shape}")
+        x = self.cnn_decoder(x, [r] + cnn_skips[:-1])
+
         x = torch.concatenate([x, self.out_skip(in_x)], dim=1)
         x = self.out(x)
 

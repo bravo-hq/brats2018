@@ -33,7 +33,9 @@ warnings.filterwarnings("ignore")
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Your script description here")
     parser.add_argument("-c", "--config", type=str, required=True, help="config file")
-    parser.add_argument("-f", "--fold", type=int, required=False, default=-1,help="fold") #only for pancrease and LA dataset
+    parser.add_argument(
+        "-f", "--fold", type=int, required=False, default=-1, help="fold"
+    )  # only for pancrease and LA dataset
     return parser.parse_args()
 
 
@@ -50,20 +52,20 @@ def get_base_directory():
 
 
 def configure_logger(config, parent_dir):
-    # if config["LRZ_node"]:
-    #     path = os.path.join(
-    #         f"/cabinet/yousef/{(config['dataset']['name'].split('_')[0])}/",
-    #         "tb_logs",
-    #     )
-    # else:
-    path = os.path.join(parent_dir, "tb_logs")
+    if config["LRZ_node"]:
+        path = os.path.join(
+            f"/cabinet/yousef/{(config['dataset']['name'].split('_')[0])}/",
+            "tb_logs",
+        )
+    else:
+        path = os.path.join(parent_dir, "tb_logs")
     return TensorBoardLogger(path, name=config["model"]["name"])
 
 
 def configure_trainer(config, logger):
-    brats_dataset=True
-    if 'brats' not in config["dataset"]["name"].split("_")[0]:
-        brats_dataset=False
+    brats_dataset = True
+    if "brats" not in config["dataset"]["name"].split("_")[0]:
+        brats_dataset = False
     # checkpoint_callback = ModelCheckpoint(
     #     monitor="val_total_dice",
     #     dirpath=logger.log_dir,
@@ -82,7 +84,9 @@ def configure_trainer(config, logger):
     )
     lr_monitor = LearningRateMonitor(logging_interval="epoch")
     check_val_every_n_epoch = config.get("check_val_every_n_epoch", 1)
-    check_val_every_n_epoch = check_val_every_n_epoch if brats_dataset else config["training"]["epochs"]
+    check_val_every_n_epoch = (
+        check_val_every_n_epoch if brats_dataset else config["training"]["epochs"]
+    )
     callbacks = [checkpoint_callback, lr_monitor]
     return Trainer(
         logger=logger,
@@ -102,7 +106,7 @@ def get_platform():
 
 
 def get_input_size_and_module(config):
-    if 'brats' in config["dataset"]["name"].split("_")[0]:
+    if "brats" in config["dataset"]["name"].split("_")[0]:
         summary_input_size = (
             config["data_loader"]["train"]["batch_size"],
             4,
@@ -121,6 +125,7 @@ def get_input_size_and_module(config):
         )
         return summary_input_size, la_heart_module
 
+
 def main():
     set_seed()
 
@@ -136,9 +141,11 @@ def main():
     CONFIG_FILE_PATH = os.path.join(BASE_DIR, "configs", CONFIG_NAME)
 
     config = load_config(CONFIG_FILE_PATH)
-    if 'brats' not in config["dataset"]["name"].split("_")[0]:
+    if "brats" not in config["dataset"]["name"].split("_")[0]:
         if args.fold == -1:
-            raise ValueError("Fold must be determined for pancreas and la_heart dataset!")
+            raise ValueError(
+                "Fold must be determined for pancreas and la_heart dataset!"
+            )
         config["fold"] = args.fold
     print_config(config)
 

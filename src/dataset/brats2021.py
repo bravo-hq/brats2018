@@ -87,26 +87,84 @@ class Brats2021(Dataset):
         )
         self.aug_sample_transform = T.Compose(
             [
-                T.RandSpatialCropd(
-                    keys=keys,
-                    random_center=True,
-                    roi_size=self.crop_size,
+                T.CropForegroundd(keys=keys, source_key="volume", allow_smaller=True),
+                T.NormalizeIntensityd(keys="volume", nonzero=True, channel_wise=True),
+                # T.Spacingd(
+                #     mode=("trilinear", "nearest"),
+                #     keys=["volume", "label"],
+                #     pixdim=(1.0, 1.0, 1.0),
+                #     padding_mode="zeros",
+                # ),
+                # ConvertToMultiChannelBasedOnBratsClassesd(keys=["label"]),
+                T.RandAffined(
+                    keys=["volume", "seg-volume"],
+                    rotate_range=(
+                        (np.deg2rad(-30), np.deg2rad(30)),
+                        (np.deg2rad(-30), np.deg2rad(30)),
+                        (np.deg2rad(-30), np.deg2rad(30)),
+                    ),
+                    scale_range=((-0.3, 0.4), (-0.3, 0.4), (-0.3, 0.4)),
+                    padding_mode="zeros",
+                    mode=("trilinear", "nearest"),
+                    prob=0.2,
                 ),
-                T.RandFlipd(
-                    keys=keys,
-                    prob=self.p,
-                    spatial_axis=0,
-                ),  # vertical flip
-                T.RandFlipd(
-                    keys=keys,
-                    prob=self.p,
-                    spatial_axis=1,
-                ),  # horizontal flip
-                T.RandFlipd(
-                    keys=keys,
-                    prob=self.p,
-                    spatial_axis=2,
-                ),  # depth flip
+                T.RandGaussianNoised(keys="volume", prob=0.1, mean=0, std=0.1),
+                T.RandGaussianSmoothd(
+                    keys="volume",
+                    prob=0.2,
+                    sigma_x=(0.5, 1),
+                    sigma_y=(0.5, 1),
+                    sigma_z=(0.5, 1),
+                ),
+                T.RandScaleIntensityd(
+                    keys="volume", factors=0.25, prob=0.15, channel_wise=True
+                ),
+                T.RandScaleIntensityFixedMeand(
+                    keys="volume",
+                    factors=0.25,
+                    prob=0.15,
+                    fixed_mean=True,
+                    preserve_range=True,
+                ),
+                T.RandSimulateLowResolutiond(
+                    keys="volume",
+                    prob=0.25,
+                ),
+                T.RandAdjustContrastd(
+                    keys="volume",
+                    gamma=(0.7, 1.5),
+                    invert_image=True,
+                    retain_stats=True,
+                    prob=0.1,
+                ),
+                T.RandAdjustContrastd(
+                    keys="volume",
+                    gamma=(0.7, 1.5),
+                    invert_image=False,
+                    retain_stats=True,
+                    prob=0.3,
+                ),
+                T.RandFlipd(["volume", "seg-volume"], spatial_axis=[0], prob=0.5),
+                T.RandFlipd(["volume", "seg-volume"], spatial_axis=[1], prob=0.5),
+                T.RandFlipd(["volume", "seg-volume"], spatial_axis=[2], prob=0.5),
+                T.SpatialPadd(
+                    keys=["volume", "seg-volume"],
+                    spatial_size=self.crop_size,
+                ),
+                T.RandCropByPosNegLabeld(
+                    keys=["volume", "seg-volume"],
+                    label_key="seg-volume",
+                    spatial_size=self.crop_size,
+                    pos=2,
+                    neg=1,
+                    num_samples=1,
+                    image_key="volume",
+                    image_threshold=0,
+                ),
+                T.CastToTyped(
+                    keys=["volume", "seg-volume"], dtype=(np.float32, np.uint8)
+                ),
+                T.ToNumpyd(keys=["volume", "seg-volume"]),
             ]
         )
 
@@ -139,7 +197,7 @@ class Brats2021(Dataset):
 
     def _aug_sample(self, volumes, mask):
         data_dict = {"volume": volumes, "seg-volume": mask}
-        transformed = self.aug_sample_transform(data_dict)
+        transformed = self.aug_sample_transform(data_dict)[0]
         return transformed["volume"], transformed["seg-volume"]
 
     def normlize(self, x):

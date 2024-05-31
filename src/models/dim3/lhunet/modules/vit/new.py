@@ -2,10 +2,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
-# import sys
-# sys.path.append("..")
 
-from ..dynunet_blocks import UnetResBlock
 from ..cnn import *
 
 
