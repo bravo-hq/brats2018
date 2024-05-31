@@ -67,11 +67,13 @@ class Brats2021(Dataset):
         if self.mode == "tr":
             volumes, seg_volume = self._aug_sample(volumes, seg_volume)
 
-        data_dict["volume"] = (
-            torch.as_tensor(volumes).permute(0, 3, 1, 2).float()
+        data_dict["volume"] = np.transpose(np.array(volumes), (0, 3, 1, 2)).astype(
+            np.float32
         )  # [C, D, H, W]
-        data_dict["seg-volume"] = (
-            torch.as_tensor(seg_volume).permute(0, 3, 1, 2).type(torch.uint8)
+        data_dict["seg-volume"] = np.transpose(
+            np.array(seg_volume), (0, 3, 1, 2)
+        ).astype(
+            np.uint8
         )  # [1, D, H, W]
 
         return data_dict
